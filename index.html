@@ -1144,14 +1144,18 @@ Propose exactement 3 plats différents, sains et savoureux. Pour chaque plat, r�
     if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
     const data = await res.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    // Parse JSON — strip markdown fences + fix control characters
-    let jsonStr = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    // Remove control characters inside JSON strings (newlines, tabs, etc.)
-    jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, c => {
-      if (c === '\n') return '\\n';
-      if (c === '\r') return '\\r';
-      if (c === '\t') return '\\t';
-      return '';
+    // Robust JSON extraction
+    // 1. Strip markdown fences
+    let jsonStr = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    // 2. Find the JSON array bounds
+    const arrStart = jsonStr.indexOf('[');
+    const arrEnd   = jsonStr.lastIndexOf(']');
+    if (arrStart === -1 || arrEnd === -1) throw new Error('Réponse invalide de Gemini, réessaie.');
+    jsonStr = jsonStr.slice(arrStart, arrEnd + 1);
+    // 3. Sanitize control characters that break JSON.parse
+    //    Replace literal newlines INSIDE string values (between quotes) with \n
+    jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/gs, (match) => {
+      return match.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t');
     });
     repasData = JSON.parse(jsonStr);
 
