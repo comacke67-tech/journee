@@ -180,6 +180,21 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .repas-bubble:active { transform:scale(.94); }
 .repas-bubble-icon { font-size:28px; margin-bottom:4px; }
 .repas-bubble-name { font-size:11px; font-weight:500; }
+.repas-bubble-img { width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:6px; background:rgba(0,0,0,.08); }
+.repas-add-btn {
+  background:var(--bg2); border:1.5px dashed var(--sep); border-radius:14px;
+  padding:12px 24px; font-size:14px; color:var(--sub); cursor:pointer;
+  font-family:inherit; transition:all .15s; margin-top:4px;
+}
+.repas-add-btn:hover { border-color:var(--green); color:var(--green); }
+.repas-add-btn:disabled { opacity:.4; cursor:not-allowed; }
+.repas-extra-row { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-top:8px; }
+/* extra bubbles cycle colors offset by 3 */
+.repas-extra-row .repas-bubble:nth-child(1) { animation-delay:.05s; background:linear-gradient(135deg,#fce4ec,#f8bbd0); color:#7a1a2e; box-shadow:0 4px 16px rgba(255,55,95,.2); }
+.repas-extra-row .repas-bubble:nth-child(2) { animation-delay:.15s; background:linear-gradient(135deg,#e3f2fd,#bbdefb); color:#0d3c6e; box-shadow:0 4px 16px rgba(10,132,255,.2); }
+.repas-extra-row .repas-bubble:nth-child(3) { animation-delay:.25s; background:linear-gradient(135deg,#fff8e1,#ffecb3); color:#7a5c00; box-shadow:0 4px 16px rgba(255,196,0,.2); }
+/* recipe image */
+.recipe-img { width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:16px; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--hint); font-size:48px; }
 @keyframes bubbleIn { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
 .repas-hide-btn {
   background:var(--bg3); border:1px solid var(--sep); border-radius:100px;
@@ -432,7 +447,9 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
     <!-- Bubbles screen -->
     <div class="repas-bubbles-screen" id="repas-bubbles-screen">
       <div class="repas-bubbles-row" id="repas-bubbles-row"></div>
-      <button class="repas-hide-btn" onclick="showRepasInput()">← Nouvelle recherche</button>
+      <button class="repas-add-btn" id="repas-add-btn" onclick="genRepasExtra()">+ 3 autres idées</button>
+      <div class="repas-extra-row" id="repas-extra-row" style="display:none;"></div>
+      <button class="repas-hide-btn" onclick="showRepasInput()" style="margin-top:8px;">← Nouvelle recherche</button>
     </div>
   </div>
 
@@ -445,7 +462,13 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
       <div class="recipe-title" id="recipe-title"></div>
       <button class="recipe-close" onclick="closeRecipe()">Masquer</button>
     </div>
-    <div class="recipe-body"><p id="recipe-body"></p></div>
+    <div class="recipe-body">
+      <div class="recipe-img" id="recipe-img-wrap">
+        <img id="recipe-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:none;">
+        <span id="recipe-img-emoji" style="font-size:56px;"></span>
+      </div>
+      <p id="recipe-body"></p>
+    </div>
   </div>
 </div>
 
@@ -1108,7 +1131,77 @@ function openRecipe(idx) {
   if (!r) return;
   document.getElementById('recipe-title').textContent = r.emoji + ' ' + r.name;
   document.getElementById('recipe-body').textContent = r.recipe;
+  // Show emoji as placeholder, try to load image from Unsplash
+  document.getElementById('recipe-img').style.display = 'none';
+  document.getElementById('recipe-img-emoji').textContent = r.emoji;
+  const imgEl = document.getElementById('recipe-img');
+  const query = encodeURIComponent(r.name.split(' ').slice(0,3).join(' '));
+  imgEl.src = 'https://source.unsplash.com/480x180/?' + query + ',food';
+  imgEl.onload = () => { imgEl.style.display = 'block'; document.getElementById('recipe-img-emoji').style.display = 'none'; };
+  imgEl.onerror = () => { imgEl.style.display = 'none'; document.getElementById('recipe-img-emoji').style.display = ''; };
   document.getElementById('recipe-overlay').classList.add('show');
+}
+
+function buildBubbleRow(container, items, offset) {
+  container.innerHTML = items.map((r,i) =>
+    `<button class="repas-bubble" onclick="openRecipe(${offset+i})">
+      <div class="repas-bubble-icon">${r.emoji}</div>
+      <div class="repas-bubble-name">${r.name}</div>
+    </button>`
+  ).join('');
+}
+
+async function genRepasExtra() {
+  const key = localStorage.getItem(AI_KEY_STORE);
+  if (!key) return;
+  const btn = document.getElementById('repas-add-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  const input = document.getElementById('repas-input').value.trim();
+  const existing = repasData.map(r=>r.name).join(', ');
+  const prompt = buildRepasPrompt(input, `Évite ces plats déjà proposés : ${existing}.`);
+  try {
+    const extra = await fetchRepas(key, prompt);
+    repasData = repasData.concat(extra);
+    const extraRow = document.getElementById('repas-extra-row');
+    extraRow.style.display = 'flex';
+    buildBubbleRow(extraRow, extra, repasData.length - extra.length);
+    btn.style.display = 'none';
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '+ 3 autres idées';
+  }
+}
+
+function buildRepasPrompt(input, extra) {
+  return `Tu es un nutritionniste et cuisinier passionné. L'utilisateur te donne ses envies ou contraintes : "${input || 'repas sain et équilibré du soir'}". ${extra||''}
+
+Propose exactement 3 plats différents, sains et savoureux. Réponds UNIQUEMENT avec ce format JSON (sans texte avant ou après, sans markdown) :
+[{"name":"Nom du plat","emoji":"🥗","recipe":"Ingrédients (pour 2 personnes) : - ing1 - ing2 Préparation : 1. étape1 2. étape2 Temps : 20 min | Calories : ~450 kcal"},{"name":"...","emoji":"🍗","recipe":"..."},{"name":"...","emoji":"🐟","recipe":"..."}]`;
+}
+
+async function fetchRepas(key, prompt) {
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + encodeURIComponent(key),
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        contents: [{role:'user', parts:[{text: prompt}]}],
+        generationConfig: {maxOutputTokens: 3000, temperature: 0.9}
+      })
+    }
+  );
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+  const data = await res.json();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  let jsonStr = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const arrStart = jsonStr.indexOf('['), arrEnd = jsonStr.lastIndexOf(']');
+  if (arrStart === -1 || arrEnd === -1) throw new Error('Réponse invalide, réessaie.');
+  jsonStr = jsonStr.slice(arrStart, arrEnd + 1);
+  jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/gs, m => m.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t'));
+  return JSON.parse(jsonStr);
 }
 
 async function genRepas() {
@@ -1120,54 +1213,14 @@ async function genRepas() {
   btn.disabled = true;
   loading.style.display = 'block';
 
-  const prompt = `Tu es un nutritionniste et cuisinier passionné. L'utilisateur te donne ses envies ou contraintes : "${input || 'repas sain et équilibré du soir'}".
-
-Propose exactement 3 plats différents, sains et savoureux. Pour chaque plat, réponds UNIQUEMENT avec ce format JSON exact (pas de texte avant ou après) :
-[
-  {"name": "Nom du plat", "emoji": "🥗", "recipe": "Ingrédients (pour 2 personnes) :\n- ingrédient 1\n- ingrédient 2\n\nPréparation :\n1. étape 1\n2. étape 2\n3. étape 3\n\nTemps : 20 min | Calories : ~450 kcal"},
-  {"name": "...", "emoji": "🍗", "recipe": "..."},
-  {"name": "...", "emoji": "🐟", "recipe": "..."}
-]`;
-
+  const prompt = buildRepasPrompt(input);
   try {
-    const res = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + encodeURIComponent(key),
-      {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          contents: [{role:'user', parts:[{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 3000, temperature: 0.9}
-        })
-      }
-    );
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
-    const data = await res.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    // Robust JSON extraction
-    // 1. Strip markdown fences
-    let jsonStr = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-    // 2. Find the JSON array bounds
-    const arrStart = jsonStr.indexOf('[');
-    const arrEnd   = jsonStr.lastIndexOf(']');
-    if (arrStart === -1 || arrEnd === -1) throw new Error('Réponse invalide de Gemini, réessaie.');
-    jsonStr = jsonStr.slice(arrStart, arrEnd + 1);
-    // 3. Sanitize control characters that break JSON.parse
-    //    Replace literal newlines INSIDE string values (between quotes) with \n
-    jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/gs, (match) => {
-      return match.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t');
-    });
-    repasData = JSON.parse(jsonStr);
+    repasData = await fetchRepas(key, prompt);
 
     // Build bubbles
-    const row = document.getElementById('repas-bubbles-row');
-    row.innerHTML = repasData.map((r,i) =>
-      `<button class="repas-bubble" onclick="openRecipe(${i})">
-        <div class="repas-bubble-icon">${r.emoji}</div>
-        <div class="repas-bubble-name">${r.name}</div>
-      </button>`
-    ).join('');
-
+    document.getElementById('repas-extra-row').style.display = 'none';
+    document.getElementById('repas-add-btn').style.display = '';
+    buildBubbleRow(document.getElementById('repas-bubbles-row'), repasData, 0);
     document.getElementById('repas-input-screen').style.display = 'none';
     document.getElementById('repas-bubbles-screen').classList.add('show');
   } catch(e) {
