@@ -1217,17 +1217,23 @@ async function genRepasExtra() {
   }
 }
 
-const CUISINES = ['méditerranéen','asiatique','mexicain','français','japonais','indien','libanais','italien','thaïlandais','grec','marocain','péruvien','coréen','américain healthy'];
-const STYLES = ['rapide et simple','gourmand','léger','épicé','comfort food','gastronomique','street food healthy','veggie','riche en protéines','detox'];
+const CUISINES_EU = ['français','italien','grec','espagnol','provençal','basque','lyonnais','normand','breton','portugais','belge'];
+const STYLES = ['rapide et simple','gourmand','léger','comfort food','maison','veggie','riche en protéines','facile en semaine'];
 
 function buildRepasPrompt(input, extra) {
-  // Inject random cuisine + style to force variety each call
-  const rCuisine = CUISINES[Math.floor(Math.random()*CUISINES.length)];
+  const rCuisine = CUISINES_EU[Math.floor(Math.random()*CUISINES_EU.length)];
   const rStyle   = STYLES[Math.floor(Math.random()*STYLES.length)];
   const seed     = Math.floor(Math.random()*9999);
-  return `[Seed:${seed}] Tu es un nutritionniste et cuisinier passionné. Envies/contraintes : "${input || 'repas sain du soir'}". Orientation créative du moment : cuisine ${rCuisine}, style ${rStyle}. ${extra||''}
+  return `[Seed:${seed}] Tu es un cuisinier et nutritionniste français. Envies/contraintes : "${input || 'repas sain du soir'}". ${extra||''}
 
-Propose exactement 3 plats VARIÉS et ORIGINAUX, différents des classiques. Réponds UNIQUEMENT avec ce JSON (sans texte, sans markdown) :
+RÈGLES IMPÉRATIVES :
+- Cuisine européenne uniquement (${rCuisine} de préférence), style ${rStyle}
+- Ingrédients faciles à trouver en France (supermarché classique)
+- Pas de plats exotiques sauf si l'utilisateur le demande explicitement
+- Plats du quotidien, réalisables en cuisine normale
+- Variés entre eux (pas 3 salades ou 3 pâtes)
+
+Réponds UNIQUEMENT avec ce JSON (sans texte, sans markdown) :
 [{"name":"Nom du plat","emoji":"🥗","recipe":"Ingrédients (2 personnes) :\n- ing1\n- ing2\n\nPréparation :\n1. étape1\n2. étape2\n\nTemps : 20 min | ~450 kcal"},{"name":"...","emoji":"🍗","recipe":"..."},{"name":"...","emoji":"🐟","recipe":"..."}]`;
 }
 
