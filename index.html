@@ -548,8 +548,10 @@ function makeBubbleSVG(ratio, color, val, denom, lbl) {
     <svg class="bubble-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="5"/>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="5"
-        stroke-dasharray="${filled} ${circ}" stroke-dashoffset="${circ/4}"
-        stroke-linecap="round" style="transition:stroke-dasharray .5s ease"/>
+        ${ratio>=1
+          ? ''
+          : `stroke-dasharray="${filled} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round"`}
+        style="transition:stroke-dasharray .5s ease"/>
       <text x="${cx}" y="${cy-4}" text-anchor="middle" dominant-baseline="auto"
         fill="currentColor" font-size="16" font-weight="700" font-family="-apple-system,sans-serif" letter-spacing="-0.5">${val}</text>
       <text x="${cx}" y="${cy+11}" text-anchor="middle" dominant-baseline="auto"
