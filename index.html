@@ -161,7 +161,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-card { background:var(--bg2); border-radius:var(--r); padding:24px 20px; margin-bottom:12px; min-height:160px; display:flex; flex-direction:column; justify-content:space-between; }
 .ai-intro { font-size:13px; color:var(--sub); margin-bottom:12px; }
 .ai-text { font-size:17px; font-weight:300; line-height:1.6; color:var(--text); flex:1; }
-.ai-text.loading { color:var(--hint); font-style:italic; font-size:15px; }
+.ai-text.loading { color:var(--hint); font-style:italic; font-size:15px; animation:ai-pulse 1.5s ease-in-out infinite; }
 .ai-period { font-size:12px; color:var(--hint); margin-top:12px; }
 .ai-btn { width:100%; height:50px; background:var(--blue); color:#fff; border:none; border-radius:var(--r); font-size:16px; cursor:pointer; font-family:inherit; transition:opacity .15s,transform .15s; display:flex; align-items:center; justify-content:center; gap:8px; }
 .ai-btn:active { opacity:.8; transform:scale(.98); }
@@ -174,9 +174,6 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-key-save:hover { color:var(--text); }
 .ai-history { background:var(--bg2); border-radius:var(--r); padding:14px 16px; }
 .ai-history-title { font-size:12px; color:var(--hint); margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
-.ai-past-item { border-top:1px solid var(--sep); padding:10px 0; font-size:14px; color:var(--sub); line-height:1.5; }
-.ai-past-item:first-of-type { border-top:none; }
-.ai-past-date { font-size:11px; color:var(--hint); margin-bottom:3px; }
 /* ── DB Viewer ── */
 .edit-hint { display:none; text-align:center; padding:10px 0 4px; font-size:13px; color:var(--hint); }
 .filled-bar { display:none; border-radius:10px; padding:8px 14px; margin-bottom:8px; font-size:13px; font-weight:400; letter-spacing:.01em; }
@@ -326,21 +323,21 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
   <!-- AI VIEW -->
   <div class="view" id="view-ai">
     <div class="ai-view">
-      <div class="ai-header">
+      <header style="margin-bottom:4px;">
         <div class="hdate" id="ai-hdate"></div>
         <button class="ai-gear" onclick="openSettings()" title="Réglages">⚙</button>
-      </div>
+      </header>
       <div class="ai-card">
-        <div class="ai-intro">Analyse IA de ta progression</div>
-        <div class="ai-text" id="ai-text">Lance l'analyse pour obtenir un bilan personnalisé.</div>
+        <div class="ai-badge">✦ Analyse IA</div>
+        <div class="ai-text" id="ai-text">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
         <div class="ai-period" id="ai-period"></div>
       </div>
+      <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
       <div class="ai-key-row">
         <input class="ai-key-input" id="ai-key-input" type="password" placeholder="Clé API Gemini (AIzaSy…)">
         <button class="ai-key-save" onclick="saveKey()">Sauver</button>
       </div>
-      <button class="ai-btn" id="ai-btn" onclick="runAI()">✦ Analyser ma semaine</button>
-      <div class="ai-history" id="ai-history" style="display:none;margin-top:12px;">
+      <div class="ai-history" id="ai-history" style="display:none;">
         <div class="ai-history-title">Analyses précédentes</div>
         <div id="ai-history-list"></div>
       </div>
@@ -726,7 +723,7 @@ async function runAI(){
 
   try{
     const res=await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(key),
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(key),
       {
         method:'POST',
         headers:{'Content-Type':'application/json'},
