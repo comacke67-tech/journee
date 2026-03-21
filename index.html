@@ -777,7 +777,8 @@ function closeSettings(){ document.getElementById('settings-overlay').classList.
 function closeSettingsIfBg(e){ if(e.target===document.getElementById('settings-overlay'))closeSettings(); }
 
 // ── AI ─────────────────────────────────────────────
-const AI_KEY_STORE = 'mj_ai_key';
+const AI_KEY_STORE    = 'mj_ai_key';
+const PEXELS_KEY_STORE = 'mj_pexels_key';
 const AI_HIST_STORE = 'mj_ai_history';
 
 function saveKey(){
@@ -785,8 +786,17 @@ function saveKey(){
   if(!v)return;
   localStorage.setItem(AI_KEY_STORE,v);
   const inp=document.getElementById('ai-key-input');
-  inp.value='';
-  inp.placeholder='✓ Clé sauvegardée';
+  inp.value=''; inp.placeholder='✓ Clé sauvegardée';
+  inp.style.borderColor='var(--green)';
+  setTimeout(()=>{inp.style.borderColor='';},2000);
+}
+
+function savePexelsKey(){
+  const v=document.getElementById('pexels-key-input').value.trim();
+  if(!v)return;
+  localStorage.setItem(PEXELS_KEY_STORE,v);
+  const inp=document.getElementById('pexels-key-input');
+  inp.value=''; inp.placeholder='✓ Clé Pexels sauvegardée';
   inp.style.borderColor='var(--green)';
   setTimeout(()=>{inp.style.borderColor='';},2000);
 }
@@ -901,8 +911,8 @@ function renderAIView(){
   const isPink=P==='lili';
   document.getElementById('ai-btn').className='ai-btn'+(isPink?' pink':'');
   document.getElementById('ai-hdate').textContent=document.getElementById('hdr-date').textContent;
-  const key=localStorage.getItem(AI_KEY_STORE);
-  if(key) document.getElementById('ai-key-input').placeholder='Clé API sauvegardée ✓';
+  if(localStorage.getItem(AI_KEY_STORE)) document.getElementById('ai-key-input').placeholder='Clé API sauvegardée ✓';
+  if(localStorage.getItem(PEXELS_KEY_STORE)) document.getElementById('pexels-key-input').placeholder='✓ Clé Pexels sauvegardée';
   renderAIHistory();
 }
 
@@ -1156,32 +1166,24 @@ function openRecipe(idx) {
   imgEl.style.display = 'none';
   emojiEl.style.display = '';
   emojiEl.textContent = r.emoji;
-  // Search TheMealDB for a matching meal image (free, no key, relevant)
-  const mealQuery = encodeURIComponent(r.name.split(' ').slice(0,2).join(' '));
-  fetch('https://www.themealdb.com/api/json/v1/1/search.php?s=' + mealQuery)
+  // Pexels image search — real food photos by dish name
+  const pexelsKey = localStorage.getItem(PEXELS_KEY_STORE);
+  if (pexelsKey) {
+    const q = encodeURIComponent(r.name + ' plat recette');
+    fetch('https://api.pexels.com/v1/search?query=' + q + '&per_page=1&orientation=landscape', {
+      headers: { Authorization: pexelsKey }
+    })
     .then(res => res.json())
     .then(data => {
-      const meal = data.meals?.[0];
-      if (meal && meal.strMealThumb) {
-        imgEl.src = meal.strMealThumb;
+      const photo = data.photos?.[0]?.src?.large;
+      if (photo) {
+        imgEl.src = photo;
         imgEl.onload = () => { imgEl.style.display='block'; imgEl.style.width='100%'; imgEl.style.height='auto'; emojiEl.style.display='none'; };
         imgEl.onerror = () => { imgEl.style.display='none'; emojiEl.style.display=''; };
-      } else {
-        // Fallback: search by first word (ingredient)
-        const word = encodeURIComponent(r.name.split(' ')[0]);
-        return fetch('https://www.themealdb.com/api/json/v1/1/filter.php?i=' + word)
-          .then(r2 => r2.json())
-          .then(d2 => {
-            const m2 = d2.meals?.[0];
-            if (m2) {
-              imgEl.src = m2.strMealThumb;
-              imgEl.onload = () => { imgEl.style.display='block'; imgEl.style.width='100%'; imgEl.style.height='auto'; emojiEl.style.display='none'; };
-              imgEl.onerror = () => { imgEl.style.display='none'; emojiEl.style.display=''; };
-            }
-          });
       }
     })
-    .catch(() => {}); // keep emoji if network fails
+    .catch(() => {});
+  }
   document.getElementById('recipe-overlay').classList.add('show');
 }
 
