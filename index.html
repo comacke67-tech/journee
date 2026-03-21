@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Ma Journée</title>
+<meta name="description" content="Suivi quotidien bien-être — Coco & Lili">
+<meta name="application-name" content="Ma Journée">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ma Journée">
+<meta name="theme-color" content="#f2f2f7">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNSIgZmlsbD0iI2YyZjJmNyIvPgogIDxjaXJjbGUgY3g9IjI1NiIgY3k9IjIwMCIgcj0iMTAwIiBmaWxsPSIjMGE4NGZmIi8+CiAgPHRleHQgeD0iMjU2IiB5PSIyNDAiIGZvbnQtc2l6ZT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCI+SjwvdGV4dD4KICA8cmVjdCB4PSIxMjAiIHk9IjMzMCIgd2lkdGg9IjI3MiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiMzMGQxNTgiLz4KICA8cmVjdCB4PSIxNjAiIHk9IjM2MCIgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiNmZjlmMGEiLz4KICA8cmVjdCB4PSIyMDAiIHk9IjM5MCIgd2lkdGg9IjExMiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiNiZjVhZjIiLz4KPC9zdmc+">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNSIgZmlsbD0iI2YyZjJmNyIvPgogIDxjaXJjbGUgY3g9IjI1NiIgY3k9IjIwMCIgcj0iMTAwIiBmaWxsPSIjMGE4NGZmIi8+CiAgPHRleHQgeD0iMjU2IiB5PSIyNDAiIGZvbnQtc2l6ZT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCI+SjwvdGV4dD4KICA8cmVjdCB4PSIxMjAiIHk9IjMzMCIgd2lkdGg9IjI3MiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiMzMGQxNTgiLz4KICA8cmVjdCB4PSIxNjAiIHk9IjM2MCIgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiNmZjlmMGEiLz4KICA8cmVjdCB4PSIyMDAiIHk9IjM5MCIgd2lkdGg9IjExMiIgaGVpZ2h0PSIxMiIgcng9IjYiIGZpbGw9IiNiZjVhZjIiLz4KPC9zdmc+">
 <style>
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 :root {
@@ -276,6 +284,12 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 </style>
 </head>
 <body>
+
+<div id="splash">
+  <div class="splash-icon">J</div>
+  <div class="splash-name">Ma Journée</div>
+  <div class="splash-sub">Coco &amp; Lili</div>
+</div>
 
 <div class="profile-bar">
   <div class="profile-pill">
@@ -1373,6 +1387,11 @@ async function genRepas() {
   const m=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   document.getElementById('hdr-date').textContent=j[now.getDay()]+' '+now.getDate()+' '+m[now.getMonth()];
   applyTheme();renderCheckinView();
+  // Dismiss splash after short delay
+  setTimeout(()=>{
+    const splash=document.getElementById('splash');
+    if(splash){ splash.classList.add('hide'); setTimeout(()=>splash.remove(),550); }
+  }, 1200);
 })();
 </script>
 <!-- Image fullscreen -->
