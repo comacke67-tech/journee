@@ -1191,7 +1191,28 @@ function openRecipe(idx) {
   const r = repasData[idx];
   if (!r) return;
   document.getElementById('recipe-title').textContent = r.emoji + ' ' + r.name;
-  document.getElementById('recipe-body').textContent = r.recipe;
+  // Render structured recipe
+  const body = document.getElementById('recipe-body');
+  if (r.ingredients && r.steps) {
+    const ings = r.ingredients.map(i =>
+      `<li><span class="recipe-ing-name">${i.n}</span><span class="recipe-ing-qty">${i.q}</span></li>`
+    ).join('');
+    const steps = r.steps.map((s,idx) =>
+      `<li><span class="recipe-step-num">${idx+1}</span><span>${s}</span></li>`
+    ).join('');
+    const meta = [r.time, r.calories].filter(Boolean).map(m =>
+      `<span class="recipe-meta-chip">${m}</span>`
+    ).join('');
+    body.innerHTML =
+      '<div class="recipe-section-title">Ingrédients · 2 pers.</div>' +
+      '<ul class="recipe-ingredients">'+ings+'</ul>' +
+      '<div class="recipe-section-title">Préparation</div>' +
+      '<ol class="recipe-steps">'+steps+'</ol>' +
+      (meta ? '<div class="recipe-meta">'+meta+'</div>' : '');
+  } else {
+    // Fallback for plain text recipe
+    body.innerHTML = '<p style="font-size:15px;line-height:1.7;white-space:pre-wrap;">' + (r.recipe||'') + '</p>';
+  }
   // Show emoji as placeholder, try to load image from Unsplash
   // Show emoji while image loads
   const imgEl = document.getElementById('recipe-img');
@@ -1268,7 +1289,7 @@ function buildRepasPrompt(input, extra) {
   const userInput = (input || '').toLowerCase();
   const isFancy = /gastro|gastronomique|raffiné|exotique|japonais|asiatique|épicé|indien|thaï|mexicain|original|créatif|élaboré/i.test(userInput);
   const levelNote = isFancy ? '' : 'Plats simples et classiques du quotidien (poulet roti, pates, omelette, quiche, soupe, gratin, saumon, steak), ingredients courants supermarche France. ';
-  return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+'. '+levelNote+'Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE: [{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"},{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"},{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"}]';
+  return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+'. '+levelNote+'Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE, format STRICT: [{"name":"Nom","emoji":"🍗","imageKeyword":"chicken","time":"25 min","calories":"450 kcal","ingredients":[{"n":"Poulet","q":"200g"},{"n":"Huile olive","q":"1 c.s."}],"steps":["Faire revenir le poulet 5 min","Ajouter les légumes","Servir chaud"]},...]';
 }
 
 async function fetchRepas(key, prompt) {
