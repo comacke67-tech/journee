@@ -1144,8 +1144,15 @@ Propose exactement 3 plats différents, sains et savoureux. Pour chaque plat, r�
     if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
     const data = await res.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    // Parse JSON — strip markdown fences if present
-    const jsonStr = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    // Parse JSON — strip markdown fences + fix control characters
+    let jsonStr = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    // Remove control characters inside JSON strings (newlines, tabs, etc.)
+    jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, c => {
+      if (c === '\n') return '\\n';
+      if (c === '\r') return '\\r';
+      if (c === '\t') return '\\t';
+      return '';
+    });
     repasData = JSON.parse(jsonStr);
 
     // Build bubbles
