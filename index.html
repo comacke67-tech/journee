@@ -449,6 +449,14 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
       </div>
       <button class="repas-btn" id="repas-btn" onclick="genRepas()">🍽 Générer 3 idées</button>
       <div class="repas-loading" id="repas-loading" style="display:none;">Inspiration culinaire en cours…</div>
+      <div class="ai-key-row" style="margin-top:16px;">
+        <input class="ai-key-input" id="repas-gemini-input" type="password" placeholder="Clé API Gemini (AIzaSy…)">
+        <button class="ai-key-save" onclick="saveRepasGeminiKey()">Sauver</button>
+      </div>
+      <div class="ai-key-row">
+        <input class="ai-key-input" id="repas-pexels-input" type="password" placeholder="Clé API Pexels (photos)">
+        <button class="ai-key-save" onclick="saveRepasPexelsKey()">Sauver</button>
+      </div>
     </div>
 
     <!-- Bubbles screen -->
@@ -801,6 +809,26 @@ function savePexelsKey(){
   setTimeout(()=>{inp.style.borderColor='';},2000);
 }
 
+function saveRepasGeminiKey(){
+  const v=document.getElementById('repas-gemini-input').value.trim();
+  if(!v)return;
+  localStorage.setItem(AI_KEY_STORE,v); // same key as IA tab
+  const inp=document.getElementById('repas-gemini-input');
+  inp.value=''; inp.placeholder='✓ Clé sauvegardée';
+  inp.style.borderColor='var(--green)';
+  setTimeout(()=>{inp.style.borderColor='';},2000);
+}
+
+function saveRepasPexelsKey(){
+  const v=document.getElementById('repas-pexels-input').value.trim();
+  if(!v)return;
+  localStorage.setItem(PEXELS_KEY_STORE,v);
+  const inp=document.getElementById('repas-pexels-input');
+  inp.value=''; inp.placeholder='✓ Clé Pexels sauvegardée';
+  inp.style.borderColor='var(--green)';
+  setTimeout(()=>{inp.style.borderColor='';},2000);
+}
+
 function buildPrompt(){
   const names={coco:'Coco',lili:'Lili'};
   const themeLabels={sport:'Sport',meals:'Alimentation',sleep:'Sommeil',stress:'Stress',mood:'Humeur'};
@@ -1095,7 +1123,12 @@ function switchTab(t){
   if(t==='stats')renderStats();
   if(t==='graph')setTimeout(renderGraph,50);
   if(t==='ai')renderAIView();
-  if(t==='repas'){document.getElementById('repas-input-screen').style.display='flex';document.getElementById('repas-bubbles-screen').classList.remove('show');}
+  if(t==='repas'){
+    document.getElementById('repas-input-screen').style.display='flex';
+    document.getElementById('repas-bubbles-screen').classList.remove('show');
+    if(localStorage.getItem(AI_KEY_STORE)) document.getElementById('repas-gemini-input').placeholder='✓ Clé Gemini sauvegardée';
+    if(localStorage.getItem(PEXELS_KEY_STORE)) document.getElementById('repas-pexels-input').placeholder='✓ Clé Pexels sauvegardée';
+  }
 }
 
 function switchProfile(p){
@@ -1169,13 +1202,17 @@ function openRecipe(idx) {
   // Pexels image search — real food photos by dish name
   const pexelsKey = localStorage.getItem(PEXELS_KEY_STORE);
   if (pexelsKey) {
-    const q = encodeURIComponent(r.name + ' plat recette');
-    fetch('https://api.pexels.com/v1/search?query=' + q + '&per_page=1&orientation=landscape', {
+    // Use imageKeyword if provided (simple English word), fallback to first word of dish
+    const kw = r.imageKeyword || r.name.split(' ')[0];
+    const q  = encodeURIComponent(kw + ' food');
+    fetch('https://api.pexels.com/v1/search?query=' + q + '&per_page=3&orientation=landscape', {
       headers: { Authorization: pexelsKey }
     })
     .then(res => res.json())
     .then(data => {
-      const photo = data.photos?.[0]?.src?.large;
+      // Pick a random photo among first 3 for variety
+      const photos = data.photos || [];
+      const photo  = photos[Math.floor(Math.random()*Math.min(photos.length,3))]?.src?.large;
       if (photo) {
         imgEl.src = photo;
         imgEl.onload = () => { imgEl.style.display='block'; imgEl.style.width='100%'; imgEl.style.height='auto'; emojiEl.style.display='none'; };
@@ -1227,7 +1264,11 @@ function buildRepasPrompt(input, extra) {
   const rStyle   = STYLES[Math.floor(Math.random()*STYLES.length)];
   const seed     = Math.floor(Math.random()*9999);
   // Ultra-simple prompt — forces pure JSON output, no wrapping text
-  return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+' style '+rStyle+', ingredients supermarche France, plats varies. Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE, pas de markdown, pas d explication: [{"name":"string","emoji":"string","recipe":"string"},{"name":"string","emoji":"string","recipe":"string"},{"name":"string","emoji":"string","recipe":"string"}]';
+  // Detect if user wants something fancy/exotic — if so, don't restrict
+  const userInput = (input || '').toLowerCase();
+  const isFancy = /gastro|gastronomique|raffiné|exotique|japonais|asiatique|épicé|indien|thaï|mexicain|original|créatif|élaboré/i.test(userInput);
+  const levelNote = isFancy ? '' : 'Plats simples et classiques du quotidien (poulet roti, pates, omelette, quiche, soupe, gratin, saumon, steak), ingredients courants supermarche France. ';
+  return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+'. '+levelNote+'Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE: [{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"},{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"},{"name":"string","emoji":"string","recipe":"string","imageKeyword":"simple-english-word"}]';
 }
 
 async function fetchRepas(key, prompt) {
