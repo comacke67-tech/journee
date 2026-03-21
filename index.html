@@ -194,7 +194,14 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .repas-extra-row .repas-bubble:nth-child(2) { animation-delay:.15s; background:linear-gradient(135deg,#e3f2fd,#bbdefb); color:#0d3c6e; box-shadow:0 4px 16px rgba(10,132,255,.2); }
 .repas-extra-row .repas-bubble:nth-child(3) { animation-delay:.25s; background:linear-gradient(135deg,#fff8e1,#ffecb3); color:#7a5c00; box-shadow:0 4px 16px rgba(255,196,0,.2); }
 /* recipe image */
-.recipe-img { width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:16px; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--hint); font-size:48px; }
+.recipe-img { width:100%; border-radius:12px; margin-bottom:16px; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--hint); font-size:48px; min-height:60px; overflow:hidden; }
+.recipe-img img { width:100%; height:auto; display:block; border-radius:12px; cursor:pointer; transition:opacity .2s; }
+.recipe-img img:hover { opacity:.88; }
+/* Full-screen image overlay */
+.img-fullscreen { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.92); flex-direction:column; align-items:center; justify-content:center; }
+.img-fullscreen.show { display:flex; }
+.img-fullscreen img { max-width:95vw; max-height:80vh; border-radius:16px; object-fit:contain; }
+.img-fullscreen-close { margin-top:20px; background:rgba(255,255,255,.15); border:none; border-radius:100px; padding:10px 28px; font-size:15px; color:#fff; cursor:pointer; font-family:inherit; }
 @keyframes bubbleIn { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:scale(1)} }
 .repas-hide-btn {
   background:var(--bg3); border:1px solid var(--sep); border-radius:100px;
@@ -464,7 +471,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
     </div>
     <div class="recipe-body">
       <div class="recipe-img" id="recipe-img-wrap">
-        <img id="recipe-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:none;">
+        <img id="recipe-img" src="" alt="" onclick="openImgFullscreen()" style="display:none;">
         <span id="recipe-img-emoji" style="font-size:56px;"></span>
       </div>
       <p id="recipe-body"></p>
@@ -1126,6 +1133,17 @@ function closeRecipe() {
   document.getElementById('recipe-overlay').classList.remove('show');
 }
 
+function openImgFullscreen() {
+  const src = document.getElementById('recipe-img').src;
+  if (!src) return;
+  document.getElementById('img-fullscreen-img').src = src;
+  document.getElementById('img-fullscreen').classList.add('show');
+}
+
+function closeImgFullscreen() {
+  document.getElementById('img-fullscreen').classList.remove('show');
+}
+
 function openRecipe(idx) {
   const r = repasData[idx];
   if (!r) return;
@@ -1142,7 +1160,7 @@ function openRecipe(idx) {
   const foodCategories = ['biryani','burger','butter-chicken','dessert','dosa','fried-rice','idly','pasta','pizza','samosa'];
   const cat = foodCategories[Math.floor(Math.random()*foodCategories.length)];
   imgEl.src = `https://foodish-api.com/images/${cat}/${cat}${Math.floor(Math.random()*100)+1}.jpg`;
-  imgEl.onload = () => { imgEl.style.display = 'block'; emojiEl.style.display = 'none'; };
+  imgEl.onload = () => { imgEl.style.display = 'block'; imgEl.style.width = '100%'; imgEl.style.height = 'auto'; emojiEl.style.display = 'none'; };
   imgEl.onerror = () => { imgEl.style.display = 'none'; emojiEl.style.display = ''; };
   document.getElementById('recipe-overlay').classList.add('show');
 }
@@ -1250,5 +1268,10 @@ async function genRepas() {
   applyTheme();renderCheckinView();
 })();
 </script>
+<!-- Image fullscreen -->
+<div class="img-fullscreen" id="img-fullscreen" onclick="closeImgFullscreen()">
+  <img id="img-fullscreen-img" src="" alt="">
+  <button class="img-fullscreen-close" onclick="closeImgFullscreen()">Masquer</button>
+</div>
 </body>
 </html>
