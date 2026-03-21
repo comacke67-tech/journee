@@ -1226,17 +1226,8 @@ function buildRepasPrompt(input, extra) {
   const rCuisine = CUISINES_EU[Math.floor(Math.random()*CUISINES_EU.length)];
   const rStyle   = STYLES[Math.floor(Math.random()*STYLES.length)];
   const seed     = Math.floor(Math.random()*9999);
-  return `[Seed:${seed}] Tu es un cuisinier et nutritionniste français. Envies/contraintes : "${input || 'repas sain du soir'}". ${extra||''}
-
-RÈGLES IMPÉRATIVES :
-- Cuisine européenne uniquement (${rCuisine} de préférence), style ${rStyle}
-- Ingrédients faciles à trouver en France (supermarché classique)
-- Pas de plats exotiques sauf si l'utilisateur le demande explicitement
-- Plats du quotidien, réalisables en cuisine normale
-- Variés entre eux (pas 3 salades ou 3 pâtes)
-
-Réponds UNIQUEMENT avec ce JSON (sans texte, sans markdown) :
-[{"name":"Nom du plat","emoji":"🥗","recipe":"Ingrédients (2 personnes) :\n- ing1\n- ing2\n\nPréparation :\n1. étape1\n2. étape2\n\nTemps : 20 min | ~450 kcal"},{"name":"...","emoji":"🍗","recipe":"..."},{"name":"...","emoji":"🐟","recipe":"..."}]`;
+  // Ultra-simple prompt — forces pure JSON output, no wrapping text
+  return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+' style '+rStyle+', ingredients supermarche France, plats varies. Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE, pas de markdown, pas d explication: [{"name":"string","emoji":"string","recipe":"string"},{"name":"string","emoji":"string","recipe":"string"},{"name":"string","emoji":"string","recipe":"string"}]';
 }
 
 async function fetchRepas(key, prompt) {
