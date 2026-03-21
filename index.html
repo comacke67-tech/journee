@@ -1156,12 +1156,32 @@ function openRecipe(idx) {
   imgEl.style.display = 'none';
   emojiEl.style.display = '';
   emojiEl.textContent = r.emoji;
-  // Use Foodish API — free, no key, real food photos
-  const foodCategories = ['biryani','burger','butter-chicken','dessert','dosa','fried-rice','idly','pasta','pizza','samosa'];
-  const cat = foodCategories[Math.floor(Math.random()*foodCategories.length)];
-  imgEl.src = `https://foodish-api.com/images/${cat}/${cat}${Math.floor(Math.random()*100)+1}.jpg`;
-  imgEl.onload = () => { imgEl.style.display = 'block'; imgEl.style.width = '100%'; imgEl.style.height = 'auto'; emojiEl.style.display = 'none'; };
-  imgEl.onerror = () => { imgEl.style.display = 'none'; emojiEl.style.display = ''; };
+  // Search TheMealDB for a matching meal image (free, no key, relevant)
+  const mealQuery = encodeURIComponent(r.name.split(' ').slice(0,2).join(' '));
+  fetch('https://www.themealdb.com/api/json/v1/1/search.php?s=' + mealQuery)
+    .then(res => res.json())
+    .then(data => {
+      const meal = data.meals?.[0];
+      if (meal && meal.strMealThumb) {
+        imgEl.src = meal.strMealThumb;
+        imgEl.onload = () => { imgEl.style.display='block'; imgEl.style.width='100%'; imgEl.style.height='auto'; emojiEl.style.display='none'; };
+        imgEl.onerror = () => { imgEl.style.display='none'; emojiEl.style.display=''; };
+      } else {
+        // Fallback: search by first word (ingredient)
+        const word = encodeURIComponent(r.name.split(' ')[0]);
+        return fetch('https://www.themealdb.com/api/json/v1/1/filter.php?i=' + word)
+          .then(r2 => r2.json())
+          .then(d2 => {
+            const m2 = d2.meals?.[0];
+            if (m2) {
+              imgEl.src = m2.strMealThumb;
+              imgEl.onload = () => { imgEl.style.display='block'; imgEl.style.width='100%'; imgEl.style.height='auto'; emojiEl.style.display='none'; };
+              imgEl.onerror = () => { imgEl.style.display='none'; emojiEl.style.display=''; };
+            }
+          });
+      }
+    })
+    .catch(() => {}); // keep emoji if network fails
   document.getElementById('recipe-overlay').classList.add('show');
 }
 
@@ -1226,12 +1246,38 @@ async function fetchRepas(key, prompt) {
   if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
   const data = await res.json();
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  let jsonStr = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
-  const arrStart = jsonStr.indexOf('['), arrEnd = jsonStr.lastIndexOf(']');
-  if (arrStart === -1 || arrEnd === -1) throw new Error('Réponse invalide, réessaie.');
-  jsonStr = jsonStr.slice(arrStart, arrEnd + 1);
-  jsonStr = jsonStr.replace(/"((?:[^"\\]|\\.)*)"/gs, m => m.replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\t/g,'\\t'));
-  return JSON.parse(jsonStr);
+  return parseRepasJSON(raw);
+}
+
+function parseRepasJSON(raw) {
+  // Step 1: strip markdown fences
+  let s = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+  // Step 2: find outermost [ ... ]
+  const a = s.indexOf('['), b = s.lastIndexOf(']');
+  if (a === -1 || b === -1) throw new Error('Format inattendu de Gemini.');
+  s = s.slice(a, b+1);
+  // Step 3: aggressive cleanup — replace ALL control chars with space (safe for JSON keys/values)
+  s = s.replace(/[\x00-\x1F\x7F]/g, ' ');
+  // Step 4: try parse
+  try { return JSON.parse(s); } catch(e1) {
+    // Step 5: try fixing common issues — trailing commas, single quotes
+    try {
+      const fixed = s
+        .replace(/,\s*([}\]])/g, '$1')   // trailing commas
+        .replace(/'/g, '"');               // single -> double quotes
+      return JSON.parse(fixed);
+    } catch(e2) {
+      // Step 6: manual extract — find each {name, emoji, recipe} block
+      const items = [];
+      const re = /\{[^{}]*"name"\s*:\s*"([^"]+)"[^{}]*"emoji"\s*:\s*"([^"]+)"[^{}]*"recipe"\s*:\s*"([^"]+)"[^{}]*\}/g;
+      let m;
+      while ((m = re.exec(s)) !== null) {
+        items.push({name: m[1], emoji: m[2], recipe: m[3]});
+      }
+      if (items.length > 0) return items;
+      throw new Error('Impossible de lire la réponse. Réessaie.');
+    }
+  }
 }
 
 async function genRepas() {
