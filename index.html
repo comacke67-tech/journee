@@ -2063,16 +2063,25 @@ async function fetchRSS(url) {
 
 async function fetchNewsAPI(apiKey, query, period) {
   if (!apiKey) return [];
-  const max = period === 'month' ? 30 : period === 'week' ? 7 : 1;
+  const daysBack = period === 'month' ? 30 : period === 'week' ? 7 : 1;
+  const from = new Date();
+  from.setDate(from.getDate() - daysBack);
+  // GNews ISO format: YYYY-MM-DDTHH:mm:ssZ
+  const fromStr = from.toISOString().replace(/\.\d{3}Z$/, 'Z');
   try {
-    // GNews API — free, CORS-enabled, works from browser
-    const r = await fetch(
-      'https://gnews.io/api/v4/search?q=' + encodeURIComponent(query)
-      + '&lang=fr&max=4&from=' + (function(){const d=new Date();d.setDate(d.getDate()-max);return d.toISOString();})()
-      + '&token=' + apiKey
-    );
+    const url = 'https://gnews.io/api/v4/search?q=' + encodeURIComponent(query)
+      + '&lang=fr&country=fr&max=4&from=' + encodeURIComponent(fromStr)
+      + '&apikey=' + apiKey;  // GNews uses 'apikey' not 'token'
+    const r = await fetch(url);
+    if (!r.ok) {
+      console.warn('GNews error:', r.status, r.statusText);
+      return [];
+    }
     const d = await r.json();
-    if (d.errors) return [];
+    if (d.errors || d.error) {
+      console.warn('GNews API error:', d.errors || d.error);
+      return [];
+    }
     return (d.articles || []).slice(0, 4).map(function(a) {
       return {
         title: a.title || '',
@@ -2080,6 +2089,21 @@ async function fetchNewsAPI(apiKey, query, period) {
         date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : '',
         source: (a.source && a.source.name) ? a.source.name : ''
       };
+    });
+  } catch(e) {
+    console.warn('fetchNewsAPI error:', e.message);
+    return [];
+  }
+}
+
+async function fetchNewsAPIEn(apiKey, query, period) {
+  if (!apiKey) return [];
+  try {
+    const r = await fetch('https://gnews.io/api/v4/search?q=' + encodeURIComponent(query) + '&max=4&apikey=' + apiKey);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return (d.articles || []).slice(0, 4).map(function(a) {
+      return { title: a.title||'', url: a.url||'', date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : '', source: (a.source&&a.source.name)||'' };
     });
   } catch(e) { return []; }
 }
@@ -2130,10 +2154,19 @@ async function genNews(period) {
     const nl = '\n';
 
     if (!hasNews) {
-      alert('Aucune actualite trouvee. Verifie ta cle GNews dans les reglages.');
-      btn.disabled = false;
-      loading.style.display = 'none';
-      return;
+      // Try without language/country filter as fallback
+      const [m2, f2, a2] = await Promise.all([
+        fetchNewsAPIEn(newsApiKey, 'world news', period),
+        fetchNewsAPIEn(newsApiKey, 'France news', period),
+        fetchNewsAPIEn(newsApiKey, 'Alsace Strasbourg', period)
+      ]);
+      if (m2.length + f2.length + a2.length === 0) {
+        alert('Aucune actualite trouvee. Cle GNews invalide ou quota depasse (100/jour gratuit).');
+        btn.disabled = false;
+        loading.style.display = 'none';
+        return;
+      }
+      mondeItems.push(...m2); franceItems.push(...f2); alsaceItems.push(...a2);
     }
 
     const headlineBlock = nl + 'ACTUALITES REELLES NEWSAPI :' + nl
