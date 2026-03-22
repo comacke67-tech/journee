@@ -294,7 +294,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 }
 .recipe-body { overflow-y:auto; padding:16px 20px 32px; }
 .recipe-body p { font-size:15px; line-height:1.75; color:var(--text); white-space:pre-wrap; }
-.repas-loading { font-size:15px; color:var(--hint); font-style:italic; text-align:center; padding:20px 0; animation:ai-pulse 1.5s ease-in-out infinite; }
+.repas-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px 0; gap:10px; width:100%; text-align:center; font-size:14px; color:var(--hint); font-style:italic; }
 /* ── Settings sheet ── */
 .settings-overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,.5); backdrop-filter:blur(8px); display:none; flex-direction:column; }
 .settings-overlay.open { display:flex; }
@@ -524,7 +524,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <textarea id="repas-input" placeholder="Ex : je veux quelque chose de léger ce soir, j'ai des légumes et du poulet, sans gluten…"></textarea>
       </div>
       <button class="repas-btn" id="repas-btn" onclick="genRepas()">🍽 Générer 3 idées</button>
-      <div class="repas-loading" id="repas-loading" style="display:none;">Inspiration culinaire en cours…</div>
+      <div class="repas-loading" id="repas-loading" style="display:none;"><div class="news-spinner" style="margin:0 auto;"></div><span>Inspiration culinaire en cours…</span></div>
 
     </div>
 
@@ -1714,10 +1714,17 @@ function renderNewsDetail() {
     if (urlMatch) { mainText = urlMatch[1].trim(); sourceText = urlMatch[2].trim(); }
     else { mainText = raw; sourceText = ''; }
   }
-  const linkify = t => t.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
-  bodyEl.innerHTML =
-    '<span>' + linkify(mainText) + '</span>' +
-    (sourceText ? '<br><br><em style="font-size:13px;color:var(--hint);display:block;">' + linkify(sourceText) + '</em>' : '');
+  const linkify = t => t.replace(/(https?:\/\/[^\s<>"']+)/g, url => '<a href="'+url+'" target="_blank" style="word-break:break-all;">'+url+'</a>');
+  // Ask Gemini to include date — parse it from source block if present
+  // Format: Source : name | Date : dd/mm/yyyy | https://...
+  // or just detect any date pattern near the source
+  const dateMatch = sourceText.match(/\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{1,2}\s+(?:jan|fév|mar|avr|mai|juin|juil|aoû|sep|oct|nov|déc)[a-z]*\.?\s+\d{4})\b/i);
+  const dateStr = dateMatch ? dateMatch[0] : '';
+  const sourceLine = sourceText ? '<br><br>'
+    + (dateStr ? '<strong style="font-size:13px;color:var(--text);display:block;margin-bottom:4px;">' + dateStr + '</strong>' : '')
+    + '<em style="font-size:13px;color:var(--hint);display:block;word-break:break-all;white-space:normal;">' + linkify(sourceText.replace(dateMatch?dateMatch[0]:'XXXXXXXX','').trim()) + '</em>'
+    : '';
+  bodyEl.innerHTML = '<span style="white-space:pre-wrap;">' + linkify(mainText) + '</span>' + sourceLine;
   document.getElementById('news-prev-btn').disabled = newsIdx === 0;
   document.getElementById('news-next-btn').disabled = newsIdx === newsData.length - 1;
 }
@@ -1734,7 +1741,7 @@ async function genNews(period) {
 
   const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const periodLabel = period==='week'?'de la semaine':period==='month'?'du mois':'de la journée';
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."}]}';
+  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : Nom du media, Date : JJ/MM/AAAA, https://url-source"}]}';
 
   try {
     const res = await fetch(
