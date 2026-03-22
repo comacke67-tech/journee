@@ -1188,9 +1188,9 @@ async function runAI(){
       // Remove any stray === markers Gemini might include
       let t = txt.replace(/===\w+===/g,'').trim();
       return t
-        .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm,
+        .replace(/^([A-Z][A-Z ]+\s*:)/gm,
           '<strong style="font-size:12px;letter-spacing:.05em;opacity:.7;">$1</strong>')
-        .replace(/^(→\s*ACTION\s*:.*)/gm,
+        .replace(/^(ACTION\s*:.*)/gm,
           '<div style="margin-top:10px;padding:8px 12px;background:rgba(10,132,255,.08);border-radius:8px;font-size:14px;font-weight:500;color:var(--blue);">$1</div>')
         .replace(/\n/g,'<br>');
     };
@@ -1631,7 +1631,7 @@ async function analysePhoto() {
     const data = await res.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     let parsed;
-    try { parsed = JSON.parse(raw.replace(/```json|```/g,'')); }
+    try { parsed = JSON.parse(raw.split('```json').join('').split('```').join('')); }
     catch(e) { throw new Error('Réponse invalide de Gemini'); }
 
     result.style.display = 'block';
@@ -1778,7 +1778,7 @@ function buildRepasPrompt(input, extra) {
   // Ultra-simple prompt — forces pure JSON output, no wrapping text
   // Detect if user wants something fancy/exotic — if so, don't restrict
   const userInput = (input || '').toLowerCase();
-  const isFancy = /gastro|gastronomique|raffiné|exotique|japonais|asiatique|épicé|indien|thaï|mexicain|original|créatif|élaboré/i.test(userInput);
+  const isFancy = /gastro|gastronomique|raffine|exotique|japonais|asiatique|epice|indien|thai|mexicain|original|creatif|elabore/i.test(userInput);
   const levelNote = isFancy ? '' : 'Plats simples et classiques du quotidien (poulet roti, pates, omelette, quiche, soupe, gratin, saumon, steak), ingredients courants supermarche France. ';
   return 'Seed:'+seed+'. Cuisinier français. Demande: "'+( input||'repas sain du soir')+'" '+( extra||'')+' Cuisine '+rCuisine+'. '+levelNote+'Reponds SEULEMENT avec un tableau JSON de 3 objets, RIEN DAUTRE, format STRICT: [{"name":"Nom","emoji":"🍗","imageKeyword":"chicken","time":"25 min","calories":"450 kcal","ingredients":[{"n":"Poulet","q":"200g"},{"n":"Huile olive","q":"1 c.s."}],"steps":["Faire revenir le poulet 5 min","Ajouter les légumes","Servir chaud"]},...]';
 }
@@ -1803,7 +1803,7 @@ async function fetchRepas(key, prompt) {
 
 function parseRepasJSON(raw) {
   // Step 1: strip markdown fences
-  let s = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+  let s = raw.replace('','').split('json','').replace('').join('').trim();
   // Step 2: find outermost [ ... ]
   const a = s.indexOf('['), b = s.lastIndexOf(']');
   if (a === -1 || b === -1) throw new Error('Format inattendu de Gemini.');
@@ -2017,7 +2017,7 @@ function renderNewsDetail() {
   // Ask Gemini to include date — parse it from source block if present
   // Format: Source : name | Date : dd/mm/yyyy | https://...
   // or just detect any date pattern near the source
-  const dateMatch = sourceText.match(/\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{1,2}\s+(?:jan|fév|mar|avr|mai|juin|juil|aoû|sep|oct|nov|déc)[a-z]*\.?\s+\d{4})\b/i);
+  const dateMatch = sourceText.match(/\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{1,2}\s+(?:jan|fev|mar|avr|mai|juin|juil|aou|sep|oct|nov|dec)[a-z]*\.?\s+\d{4})\b/i);
   const dateStr = dateMatch ? dateMatch[0] : '';
   // Format date as "JJ mois AAAA"
   const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -2040,61 +2040,61 @@ function renderNewsDetail() {
 }
 
 // ── RSS + NewsAPI helpers ────────────────────────────────────────────────────
+const NEWS_API_KEY_STORE = 'mj_newsapi_key';
 const RSS_FEEDS = {
-  monde: [
-    'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/world/rss.xml&count=5',
-    'https://api.rss2json.com/v1/api.json?rss_url=https://www.lemonde.fr/rss/une.xml&count=5'
-  ],
-  france: [
-    'https://api.rss2json.com/v1/api.json?rss_url=https://www.franceinfo.fr/rss&count=5',
-    'https://api.rss2json.com/v1/api.json?rss_url=https://www.lefigaro.fr/rss/figaro_actualites.xml&count=5'
-  ],
-  alsace: [
-    'https://api.rss2json.com/v1/api.json?rss_url=https://www.dna.fr/rss&count=5',
-    'https://api.rss2json.com/v1/api.json?rss_url=https://www.francebleu.fr/rss/alsace/actualites.xml&count=5'
-  ]
+  monde: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/world/rss.xml&count=5',
+  france: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.franceinfo.fr/rss&count=5',
+  alsace: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.dna.fr/rss&count=5'
 };
 
 async function fetchRSS(url) {
   try {
     const r = await fetch(url);
     const d = await r.json();
-    return (d.items||[]).slice(0,3).map(i=>({
-      title: i.title||'',
-      url: i.link||'',
-      date: i.pubDate ? new Date(i.pubDate).toLocaleDateString('fr-FR') : '',
-      source: (new URL(i.link||'https://x.com')).hostname.replace('www.','')
-    }));
+    return (d.items || []).slice(0, 4).map(function(i) {
+      return {
+        title: (i.title || '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'),
+        url: i.link || '',
+        date: i.pubDate ? new Date(i.pubDate).toLocaleDateString('fr-FR') : '',
+        source: i.link ? (new URL(i.link)).hostname.replace('www.','') : ''
+      };
+    });
   } catch(e) { return []; }
 }
 
-async function fetchNewsAPI(key, query, period) {
-  if (!key) return [];
+async function fetchNewsAPI(apiKey, query, period) {
+  if (!apiKey) return [];
   const from = new Date();
-  if (period==='week') from.setDate(from.getDate()-7);
-  else if (period==='month') from.setDate(from.getDate()-30);
-  const fromStr = from.toISOString().slice(0,10);
+  if (period === 'week') from.setDate(from.getDate() - 7);
+  else if (period === 'month') from.setDate(from.getDate() - 30);
+  const fromStr = from.toISOString().slice(0, 10);
   try {
     const r = await fetch(
-      'https://newsapi.org/v2/everything?q='+encodeURIComponent(query)+'&from='+fromStr+'&language=fr&sortBy=publishedAt&pageSize=3&apiKey='+key
+      'https://newsapi.org/v2/everything?q=' + encodeURIComponent(query)
+      + '&from=' + fromStr + '&language=fr&sortBy=publishedAt&pageSize=4&apiKey=' + apiKey
     );
     const d = await r.json();
-    return (d.articles||[]).slice(0,3).map(a=>({
-      title: a.title||'',
-      url: a.url||'',
-      date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : '',
-      source: a.source?.name||''
-    }));
+    return (d.articles || []).slice(0, 4).map(function(a) {
+      return {
+        title: a.title || '',
+        url: a.url || '',
+        date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : '',
+        source: (a.source && a.source.name) ? a.source.name : ''
+      };
+    });
   } catch(e) { return []; }
 }
 
-function formatHeadlines(items) {
-  return items.map(function(i){return '- '+i.title+' ('+i.source+(i.date?', '+i.date:'')+') '+i.url;}).join('\n');
+function fmtHeadlines(items) {
+  return items.map(function(i) {
+    return '- ' + i.title + ' (' + i.source + (i.date ? ', ' + i.date : '') + ') ' + i.url;
+  }).join('\n');
+}
 
 async function genNews(period) {
   period = period || 'day';
   const key = localStorage.getItem(AI_KEY_STORE);
-  if (!key) { alert("Entre ta clé Gemini dans les réglages ⚙."); return; }
+  if (!key) { alert("Entre ta cle Gemini dans les reglages."); return; }
   const newsApiKey = localStorage.getItem(NEWSAPI_KEY_STORE);
   const btn = document.getElementById('news-gen-btn');
   const loading = document.getElementById('news-loading');
@@ -2102,69 +2102,68 @@ async function genNews(period) {
   loading.style.display = 'block';
   document.getElementById('news-list').innerHTML = '';
 
-  const today = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const now = new Date();
+  const today = now.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const periodLabel = period === 'week' ? 'de la semaine'
+    : period === 'month' ? 'du mois'
+    : 'du jour (' + today + ')';
 
   try {
-    // ── Fetch real headlines in parallel ──────────────────────────────────
     const [mondeRSS, franceRSS, alsaceRSS,
            mondeAPI, franceAPI, alsaceAPI] = await Promise.all([
-      fetchRSS(RSS_FEEDS.monde[0]),
-      fetchRSS(RSS_FEEDS.france[0]),
-      fetchRSS(RSS_FEEDS.alsace[0]),
-      fetchNewsAPI(newsApiKey, 'actualité internationale', period),
-      fetchNewsAPI(newsApiKey, 'actualité France', period),
+      fetchRSS(RSS_FEEDS.monde),
+      fetchRSS(RSS_FEEDS.france),
+      fetchRSS(RSS_FEEDS.alsace),
+      fetchNewsAPI(newsApiKey, 'actualite internationale', period),
+      fetchNewsAPI(newsApiKey, 'actualite France', period),
       fetchNewsAPI(newsApiKey, 'Alsace Strasbourg', period)
     ]);
 
-    const mondeItems  = [...mondeRSS,  ...mondeAPI ].slice(0,5);
-    const franceItems = [...franceRSS, ...franceAPI].slice(0,5);
-    const alsaceItems = [...alsaceRSS, ...alsaceAPI].slice(0,5);
+    const mondeItems  = mondeRSS.concat(mondeAPI).slice(0, 5);
+    const franceItems = franceRSS.concat(franceAPI).slice(0, 5);
+    const alsaceItems = alsaceRSS.concat(alsaceAPI).slice(0, 5);
 
-    const hasRealNews = mondeItems.length>0 || franceItems.length>0 || alsaceItems.length>0;
-
-    // ── Build prompt with real headlines ─────────────────────────────────
-    const nl='\n';
-    const headlineBlock = hasRealNews
-      ? nl+nl+'VOICI LES VRAIES ACTUALITES DU JOUR :'+nl
-        + 'MONDE:'+nl + (mondeItems.length ? formatHeadlines(mondeItems) : 'aucune trouvee') + nl
-        + 'FRANCE:'+nl + (franceItems.length ? formatHeadlines(franceItems) : 'aucune trouvee') + nl
-        + 'ALSACE:'+nl + (alsaceItems.length ? formatHeadlines(alsaceItems) : 'aucune trouvee')
+    const hasNews = mondeItems.length + franceItems.length + alsaceItems.length > 0;
+    const nl = '\n';
+    const headlineBlock = hasNews
+      ? nl + 'ACTUALITES REELLES TROUVEES :' + nl
+        + 'MONDE:' + nl + (mondeItems.length ? fmtHeadlines(mondeItems) : 'aucune') + nl
+        + 'FRANCE:' + nl + (franceItems.length ? fmtHeadlines(franceItems) : 'aucune') + nl
+        + 'ALSACE:' + nl + (alsaceItems.length ? fmtHeadlines(alsaceItems) : 'aucune')
       : '';
 
-    const periodLabel = period==='week' ? 'de la semaine'
-      : period==='month' ? 'du mois' : 'du jour ('+today+')';
-
-    const nl2='\n';
-    const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le '+today+'. Fais un recap des actualites '+periodLabel+' style Hugo Decrypte : simple, direct, explicatif.'
+    const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le ' + today + '.'
+      + ' Resume les actualites ' + periodLabel + ' style Hugo Decrypte : simple, direct, explicatif.'
       + headlineBlock
-      + nl2+nl2+'Consignes : utilise les titres et URLs fournis ci-dessus. Ne reponds UNIQUEMENT qu en JSON valide sans markdown.'
-      + ' Format : {"news":['
-      + '{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : nom-media, JJ/MM/AAAA, https://url-exact"},'
-      + '{"cat":"monde","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url-exact"},'
-      + '{"cat":"france","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
-      + '{"cat":"france","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
-      + '{"cat":"alsace","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
-      + '{"cat":"alsace","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"}'
+      + nl + 'Reponds UNIQUEMENT en JSON valide sans markdown :'
+      + ' {"news":['
+      + '{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"monde","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"france","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"france","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"alsace","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"alsace","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"}'
       + ']}';
+
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + encodeURIComponent(key),
       {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          contents: [{role:'user', parts:[{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 4000, temperature: 0.5, responseMimeType:'application/json'}
+          contents: [{role: 'user', parts: [{text: prompt}]}],
+          generationConfig: {maxOutputTokens: 4000, temperature: 0.5, responseMimeType: 'application/json'}
         })
       }
     );
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || res.statusText); }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error && e.error.message || res.statusText); }
     const data = await res.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    let jsonStr = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const raw = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text || '').trim();
+    let jsonStr = raw.split('```json').join('').split('```').join('').trim();
     const a = jsonStr.indexOf('{'), b = jsonStr.lastIndexOf('}');
-    if (a === -1) throw new Error('Réponse invalide.');
-    jsonStr = jsonStr.slice(a, b+1);
-    jsonStr = jsonStr.replace(/[\x00-\x09\x0B-\x1F\x7F]/g,' ');
+    if (a === -1) throw new Error('Reponse invalide.');
+    jsonStr = jsonStr.slice(a, b + 1);
+    jsonStr = jsonStr.replace(/[\x00-\x09\x0b-\x1f\x7f]/g, ' ');
     const parsed = JSON.parse(jsonStr);
     newsData = parsed.news || [];
     localStorage.setItem(NEWS_STORE, JSON.stringify(newsData));
