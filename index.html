@@ -1078,18 +1078,45 @@ ${name} (${n} entrées) :
 
   return `Tu es un assistant de suivi santé direct et pédagogique. Analyse ces données (sport, alimentation, sommeil, stress, humeur — notés 1 à 3, 3 = excellent).
 
-Règles STRICTES de FORMAT (respecte-les absolument) :
-- Ton = direct, factuel. PAS de langage thérapeutique
-- Détecte et signale les alertes : sport absent, alimentation mauvaise, stress qui monte, sommeil dégradé
+FORMAT OBLIGATOIRE — respecte-le à la lettre, sans exception :
+
+===COCO===
+SPORT :
+[1-2 phrases sur le sport de Coco]
+
+ALIMENTATION :
+[1-2 phrases sur l'alimentation de Coco]
+
+SOMMEIL :
+[1-2 phrases sur le sommeil de Coco]
+
+STRESS :
+[1-2 phrases sur le stress de Coco]
+
+→ ACTION : [une action concrète pour Coco]
+===FIN_COCO===
+
+===LILI===
+SPORT :
+[1-2 phrases sur le sport de Lili]
+
+ALIMENTATION :
+[1-2 phrases sur l'alimentation de Lili]
+
+SOMMEIL :
+[1-2 phrases sur le sommeil de Lili]
+
+STRESS :
+[1-2 phrases sur le stress de Lili]
+
+→ ACTION : [une action concrète pour Lili]
+===FIN_LILI===
+
+Règles :
+- Si un profil n'a pas de données : écris juste "Pas encore de données." entre ses balises
+- Ton direct et factuel, PAS de langage thérapeutique
+- PAS de markdown, PAS de *, PAS de #
 - Choisis la période la plus pertinente (7j, 14j ou 30j)
-- STRUCTURE OBLIGATOIRE : 2 blocs séparés par une ligne vide (un pour COCO, un pour LILI)
-- Dans chaque bloc : regroupe les observations par thème
-- Chaque thème commence par le mot-clé EN MAJUSCULES suivi de ":" sur sa propre ligne (ex: "SPORT :", "SOMMEIL :", "ALIMENTATION :", "STRESS :", "HUMEUR :")
-- Sous chaque mot-clé : 1 à 2 phrases directes sur ce thème
-- Saute une ligne entre chaque thème
-- Termine chaque bloc par "→ ACTION : " suivi d'une action concrète
-- Si un profil n'a pas de données, écris juste "Pas encore de données."
-- PAS de markdown, PAS de *, PAS de #, uniquement du texte brut structuré
 
 Données :${dataSummary}`;
 }
@@ -1137,25 +1164,29 @@ async function runAI(){
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
 
     // Split on double newline = 2 distinct paragraphs
-    const parts=result.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
-    const formatBlock = txt => {
-      // Bold keyword lines (SPORT :, SOMMEIL :, etc.) + preserve newlines
-      return txt
-        .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm, '<strong>$1</strong>')
-        .replace(/^(→ ACTION\s*:)/gm, '<strong style="color:var(--blue)">$1</strong>')
-        .replace(/\n/g,'<br>');
-    };
+    const formatBlock = txt => txt
+      .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm, '<strong>$1</strong>')
+      .replace(/^(→\s*ACTION\s*:)/gm, '<strong style="color:var(--blue)">$1</strong>')
+      .replace(/\n/g,'<br>');
+    // Extract using clear separators
+    const cocoMatch = result.match(/===COCO===([\s\S]*?)===FIN_COCO===/);
+    const liliMatch = result.match(/===LILI===([\s\S]*?)===FIN_LILI===/);
     cocoEl.className='ai-profile-text';
     cocoEl.style.fontStyle=''; cocoEl.style.color='';
     liliEl.style.fontStyle=''; liliEl.style.color='';
-    if(parts.length>=2){
-      cocoEl.innerHTML=formatBlock(parts[0]);
-      liliEl.innerHTML=formatBlock(parts[1]);
+    liliEl.className='ai-profile-text';
+    if(cocoMatch){
+      cocoEl.innerHTML=formatBlock(cocoMatch[1].trim());
     } else {
+      // Fallback: split on double newline
+      const parts=result.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
       cocoEl.innerHTML=formatBlock(parts[0]||result);
+    }
+    if(liliMatch){
+      liliEl.innerHTML=formatBlock(liliMatch[1].trim());
+    } else {
       liliEl.innerHTML='';
     }
-    liliEl.className='ai-profile-text';
 
     const totalEntries=['coco','lili'].flatMap(pr=>getDBFor(pr));
     const maxN=Math.min(totalEntries.length,30);
@@ -1918,9 +1949,20 @@ function renderNewsDetail() {
   // or just detect any date pattern near the source
   const dateMatch = sourceText.match(/\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\d{4}[\/-]\d{2}[\/-]\d{2}|\d{1,2}\s+(?:jan|fév|mar|avr|mai|juin|juil|aoû|sep|oct|nov|déc)[a-z]*\.?\s+\d{4})\b/i);
   const dateStr = dateMatch ? dateMatch[0] : '';
+  // Format date as "JJ mois AAAA"
+  const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  let formattedDate='';
+  if(dateStr){
+    const dp=dateStr.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/)||dateStr.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);
+    if(dp){
+      if(dp[0].startsWith(dp[3])){formattedDate=parseInt(dp[3])+' '+MOIS[parseInt(dp[2])-1]+' '+dp[1];}
+      else{formattedDate=parseInt(dp[1])+' '+MOIS[parseInt(dp[2])-1]+' '+dp[3];}
+    } else { formattedDate=dateStr; }
+  }
+  const cleanSource=sourceText.replace(dateMatch?dateMatch[0]:'','').trim();
   const sourceLine = sourceText ? '<br><br>'
-    + (dateStr ? '<strong style="font-size:13px;color:var(--text);display:block;margin-bottom:4px;">' + dateStr + '</strong>' : '')
-    + '<em style="font-size:13px;color:var(--hint);display:block;word-break:break-all;white-space:normal;">' + linkify(sourceText.replace(dateMatch?dateMatch[0]:'XXXXXXXX','').trim()) + '</em>'
+    + '<em style="font-size:13px;color:var(--hint);display:block;word-break:break-all;white-space:normal;">' + linkify(cleanSource) + '</em>'
+    + (formattedDate ? '<strong style="font-size:13px;color:var(--text);display:block;margin-top:4px;">' + formattedDate + '</strong>' : '')
     : '';
   bodyEl.innerHTML = '<span style="white-space:pre-wrap;">' + linkify(mainText) + '</span>' + sourceLine;
   document.getElementById('news-prev-btn').disabled = newsIdx === 0;
@@ -1939,7 +1981,7 @@ async function genNews(period) {
 
   const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const periodLabel = period==='week'?'de la semaine':period==='month'?'du mois':'de la journée';
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : Nom du media, Date : JJ/MM/AAAA, https://url-source"}]}';
+  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : Nom du media, DD/MM/YYYY, https://url-exacte"}]}';
 
   try {
     const res = await fetch(
