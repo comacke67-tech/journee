@@ -194,7 +194,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .news-detail-title { font-size:18px; font-weight:500; color:var(--text); line-height:1.35; margin-bottom:14px; }
 .news-detail-text { font-size:15px; line-height:1.75; color:var(--sub); white-space:pre-wrap; }
 .news-detail-text a { color:var(--blue); text-decoration:none; }
-.news-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0; gap:12px; width:100%; }
+.news-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0; gap:12px; width:100%; text-align:center; }
 .news-spinner { width:32px; height:32px; border:3px solid var(--sep); border-top-color:var(--text); border-radius:50%; animation:spin .7s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 /* ── Repas IA ── */
@@ -529,7 +529,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
       <div class="hdate">News du jour</div>
     </header>
     <button class="news-gen-btn" id="news-gen-btn" onclick="genNews()">📰 Récap du jour</button>
-    <div class="news-loading" id="news-loading" style="display:none;"><div class="news-spinner"></div></div>
+    <div class="news-loading" id="news-loading" style="display:none;"><div class="news-spinner" style="margin:0 auto;"></div></div>
     <div id="news-list"></div>
   </div>
 
@@ -1551,20 +1551,42 @@ function closeNews() {
 
 let speechUtter = null;
 
+function getBestVoice() {
+  const voices = speechSynthesis.getVoices();
+  // Priority: premium iOS voices, then any French voice
+  const priority = ['Thomas','Amelie','Marie','Aurelie','Eddy','Grandma','Grandpa','Celeste','Samantha'];
+  for (const name of priority) {
+    const v = voices.find(v => v.name.includes(name) && v.lang.startsWith('fr'));
+    if (v) return v;
+  }
+  // Fallback: any French voice that's not 'compact' (compact = robotic on macOS)
+  return voices.find(v => v.lang.startsWith('fr') && !v.name.toLowerCase().includes('compact'))
+      || voices.find(v => v.lang.startsWith('fr'))
+      || null;
+}
+
 function toggleReadNews() {
   if (speechSynthesis.speaking) { stopReadNews(); return; }
   const n = newsData[newsIdx];
   if (!n) return;
-  // Strip HTML tags and build text to read
   const title = n.title || '';
-  const body = (n.body || '').replace(/<[^>]+>/g,'').replace(/Source\s*:.+/gi,'').trim();
+  const body = (n.body || '').replace(/<[^>]+>/g,'').replace(/Source[^.]+\./gi,'').trim();
   const text = title + '. ' + body;
   speechUtter = new SpeechSynthesisUtterance(text);
   speechUtter.lang = 'fr-FR';
-  speechUtter.rate = 1;
-  speechUtter.onend = () => { stopReadNews(); };
-  speechUtter.onerror = () => { stopReadNews(); };
-  speechSynthesis.speak(speechUtter);
+  speechUtter.rate = 0.95;
+  speechUtter.pitch = 1;
+  // Wait for voices to load if needed
+  const doSpeak = () => {
+    const voice = getBestVoice();
+    if (voice) speechUtter.voice = voice;
+    speechUtter.onend = () => { stopReadNews(); };
+    speechUtter.onerror = () => { stopReadNews(); };
+    speechSynthesis.speak(speechUtter);
+  };
+  if (speechSynthesis.getVoices().length === 0) {
+    speechSynthesis.onvoiceschanged = () => { speechSynthesis.onvoiceschanged = null; doSpeak(); };
+  } else { doSpeak(); }
   const btn = document.getElementById('news-read-btn');
   btn.textContent = '⏹';
   btn.classList.add('playing');
