@@ -167,16 +167,23 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .news-card.monde  { border-left:3px solid var(--blue); }
 .news-card.france { border-left:3px solid var(--green); }
 .news-card.alsace { border-left:3px solid var(--orange); }
+.news-btn-row { display:flex; gap:5px; margin-bottom:4px; }
 .news-gen-btn {
-  width:100%; height:52px; background:linear-gradient(135deg,#1c1c1e,#2c2c2e);
-  color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:500;
-  cursor:pointer; font-family:inherit; margin-bottom:4px;
-  display:flex; align-items:center; justify-content:center; gap:8px;
+  flex:2; height:52px; background:linear-gradient(135deg,#1c1c1e,#2c2c2e);
+  color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:500;
+  cursor:pointer; font-family:inherit;
+  display:flex; align-items:center; justify-content:center; gap:6px;
   transition:opacity .15s; box-shadow:0 4px 14px rgba(0,0,0,.15);
 }
+.news-period-btn {
+  flex:1; height:52px; border:none; border-radius:14px; font-size:13px; font-weight:500;
+  cursor:pointer; font-family:inherit; transition:opacity .15s, background .15s;
+}
+.news-period-btn.week { background:linear-gradient(135deg,#2d5a3d,#3a7a52); color:#fff; box-shadow:0 4px 14px rgba(48,209,88,.2); }
+.news-period-btn.month { background:linear-gradient(135deg,#5a2d5a,#7a3a7a); color:#fff; box-shadow:0 4px 14px rgba(191,90,242,.2); }
 body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
-.news-gen-btn:active { opacity:.8; }
-.news-gen-btn:disabled { opacity:.4; cursor:not-allowed; }
+.news-gen-btn:active,.news-period-btn:active { opacity:.8; }
+.news-gen-btn:disabled,.news-period-btn:disabled { opacity:.4; cursor:not-allowed; }
 /* News detail overlay */
 .news-overlay { display:none; position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.55); backdrop-filter:blur(8px); flex-direction:column; justify-content:flex-end; }
 .news-overlay.show { display:flex; }
@@ -304,7 +311,14 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .ai-view { display:flex; flex-direction:column; }
 .ai-header { display:flex; align-items:center; justify-content:space-between; padding:8px 0 4px; }
 .ai-gear { background:none; border:none; color:var(--hint); font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
-.ai-card { background:var(--bg2); border-radius:var(--r); padding:24px 20px; margin-bottom:12px; }
+.ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:20px 20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; overflow:visible; }
+.ai-card::before { content:'✦'; position:absolute; right:18px; top:14px; font-size:28px; opacity:.1; color:#0a84ff; }
+.ai-profile-block { margin-bottom:10px; }
+.ai-profile-block:last-child { margin-bottom:0; }
+.ai-profile-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--blue); margin-bottom:4px; }
+.ai-profile-name.lili { color:var(--pink); }
+.ai-profile-text { font-size:15px; font-weight:400; line-height:1.65; color:var(--text); }
+.ai-divider { border:none; border-top:1px solid rgba(10,132,255,.15); margin:12px 0; }
 .ai-intro { font-size:13px; color:var(--sub); margin-bottom:12px; }
 .ai-text { font-size:17px; font-weight:300; line-height:1.6; color:var(--text); }
 .ai-text.loading { color:var(--hint); font-style:italic; font-size:15px; animation:ai-pulse 1.5s ease-in-out infinite; }
@@ -318,8 +332,13 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .ai-key-input::placeholder { color:var(--hint); }
 .ai-key-save { background:var(--bg3); border:none; border-radius:10px; padding:10px 14px; font-size:13px; color:var(--sub); cursor:pointer; font-family:inherit; white-space:nowrap; }
 .ai-key-save:hover { color:var(--text); }
-.ai-history { background:var(--bg2); border-radius:var(--r); padding:14px 16px; }
+.ai-history { border-radius:var(--r); margin-top:8px; }
 .ai-history-title { font-size:12px; color:var(--hint); margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
+.ai-history-toggle-btn { width:100%; padding:12px; background:rgba(255,159,10,.1); border:1.5px solid rgba(255,159,10,.3); border-radius:14px; font-size:14px; color:#b86000; cursor:pointer; font-family:inherit; margin-bottom:8px; transition:all .15s; font-weight:400; }
+.ai-history-toggle-btn:hover { background:rgba(255,159,10,.18); }
+.ai-past-item { background:var(--bg2); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
+.ai-past-date { font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px; }
+.ai-past-text { font-size:14px; color:var(--sub); line-height:1.6; }
 /* ── DB Viewer ── */
 .edit-hint { display:none; text-align:center; padding:10px 0 4px; font-size:13px; color:var(--hint); }
 .filled-bar { display:none; border-radius:10px; padding:8px 14px; margin-bottom:8px; font-size:13px; font-weight:400; letter-spacing:.01em; }
@@ -331,11 +350,12 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 </head>
 <body>
 
-<div class="profile-bar">
+<div class="profile-bar" style="position:relative;">
   <div class="profile-pill">
     <button class="pbtn on-coco" id="pbtn-coco" onclick="switchProfile('coco')">Coco</button>
     <button class="pbtn"         id="pbtn-lili" onclick="switchProfile('lili')">Lili</button>
   </div>
+  <button onclick="openSettings()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:17px;cursor:pointer;color:var(--hint);padding:4px 6px;border-radius:8px;" title="Réglages">⚙</button>
 </div>
 
 <div class="app is-coco" id="app">
@@ -476,16 +496,14 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
       </header>
       <div class="ai-card">
         <div class="ai-badge">✦ Analyse IA</div>
-        <div class="ai-text" id="ai-text">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
+        <div id="ai-result-area">
+          <div class="ai-text" id="ai-text">Lance l'analyse pour obtenir un bilan personnalisé.</div>
+        </div>
         <div class="ai-period" id="ai-period"></div>
       </div>
       <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
-      <div class="ai-key-row">
-        <input class="ai-key-input" id="ai-key-input" type="password" placeholder="Clé API Gemini (AIzaSy…)">
-        <button class="ai-key-save" onclick="saveKey()">Sauver</button>
-      </div>
+      <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()" style="display:none;">Afficher analyses précédentes</button>
       <div class="ai-history" id="ai-history" style="display:none;">
-        <div class="ai-history-title">Analyses précédentes</div>
         <div id="ai-history-list"></div>
       </div>
     </div>
@@ -504,14 +522,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
       </div>
       <button class="repas-btn" id="repas-btn" onclick="genRepas()">🍽 Générer 3 idées</button>
       <div class="repas-loading" id="repas-loading" style="display:none;">Inspiration culinaire en cours…</div>
-      <div class="ai-key-row" style="margin-top:16px;">
-        <input class="ai-key-input" id="repas-gemini-input" type="password" placeholder="Clé API Gemini (AIzaSy…)">
-        <button class="ai-key-save" onclick="saveRepasGeminiKey()">Sauver</button>
-      </div>
-      <div class="ai-key-row">
-        <input class="ai-key-input" id="repas-pexels-input" type="password" placeholder="Clé API Pexels (photos)">
-        <button class="ai-key-save" onclick="saveRepasPexelsKey()">Sauver</button>
-      </div>
+
     </div>
 
     <!-- Bubbles screen -->
@@ -528,7 +539,11 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
     <header>
       <div class="hdate">News du jour</div>
     </header>
-    <button class="news-gen-btn" id="news-gen-btn" onclick="genNews()">📰 Récap du jour</button>
+    <div class="news-btn-row">
+      <button class="news-gen-btn" id="news-gen-btn" onclick="genNews('day')">📰 Récap du jour</button>
+      <button class="news-period-btn week" id="news-week-btn" onclick="genNews('week')">Semaine</button>
+      <button class="news-period-btn month" id="news-month-btn" onclick="genNews('month')">Mois</button>
+    </div>
     <div class="news-loading" id="news-loading" style="display:none;"><div class="news-spinner" style="margin:0 auto;"></div></div>
     <div id="news-list"></div>
   </div>
@@ -537,7 +552,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 
 <!-- News detail overlay -->
 <div class="news-overlay" id="news-overlay" onclick="closeNewsIfBg(event)">
-  <div class="news-detail">
+  <div class="news-detail" id="news-detail-sheet">
     <div class="news-detail-header">
       <div class="news-detail-nav">
         <button class="news-nav-btn" id="news-prev-btn" onclick="newsNav(-1)">‹ Préc.</button>
@@ -597,10 +612,20 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 <div class="settings-overlay" id="settings-overlay" onclick="closeSettingsIfBg(event)">
   <div class="settings-sheet">
     <div class="settings-header">
-      <div class="settings-title">Apparence</div>
+      <div class="settings-title">Réglages</div>
       <button class="settings-close" onclick="closeSettings()">✕</button>
     </div>
-
+    <div style="padding:6px 20px 16px;border-bottom:1px solid var(--sep);">
+      <div style="font-size:12px;color:var(--hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Clés API</div>
+      <div class="ai-key-row" style="margin-bottom:8px;">
+        <input class="ai-key-input" id="ai-key-input" type="password" placeholder="Gemini (AIzaSy…)">
+        <button class="ai-key-save" onclick="saveKey()">Sauver</button>
+      </div>
+      <div class="ai-key-row">
+        <input class="ai-key-input" id="pexels-key-input" type="password" placeholder="Pexels (photos recettes)">
+        <button class="ai-key-save" onclick="savePexelsKey()">Sauver</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1036,8 +1061,20 @@ async function runAI(){
     if(!res.ok){const err=await res.json();throw new Error(err.error?.message||res.statusText);}
     const data=await res.json();
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
+    // Render structured Coco + Lili blocks
+    const area=document.getElementById('ai-result-area');
+    const lines=result.split(/\n+/).filter(l=>l.trim());
+    // Try to detect Coco/Lili split
+    const cocoIdx=lines.findIndex(l=>/coco/i.test(l));
+    const liliIdx=lines.findIndex(l=>/lili/i.test(l));
+    if(cocoIdx>=0&&liliIdx>cocoIdx){
+      const cocoText=lines.slice(cocoIdx,liliIdx).join(' ');
+      const liliText=lines.slice(liliIdx).join(' ');
+      area.innerHTML=`<div class="ai-profile-block"><div class="ai-profile-name">Coco</div><div class="ai-profile-text">${cocoText}</div></div><hr class="ai-divider"><div class="ai-profile-block"><div class="ai-profile-name lili">Lili</div><div class="ai-profile-text">${liliText}</div></div>`;
+    } else {
+      area.innerHTML=`<div class="ai-profile-text">${result}</div>`;
+    }
     textEl.className='ai-text';
-    textEl.textContent=result;
 
     // Determine period label
     const totalEntries=['coco','lili'].flatMap(pr=>getDBFor(pr));
@@ -1062,19 +1099,30 @@ function renderAIView(){
   const isPink=P==='lili';
   document.getElementById('ai-btn').className='ai-btn'+(isPink?' pink':'');
   document.getElementById('ai-hdate').textContent=document.getElementById('hdr-date').textContent;
-  if(localStorage.getItem(AI_KEY_STORE)) document.getElementById('ai-key-input').placeholder='Clé API sauvegardée ✓';
-  if(localStorage.getItem(PEXELS_KEY_STORE)) document.getElementById('pexels-key-input').placeholder='✓ Clé Pexels sauvegardée';
   renderAIHistory();
+  // update settings key placeholders if overlay is open
+  const gk=document.getElementById('ai-key-input');
+  const pk=document.getElementById('pexels-key-input');
+  if(gk&&localStorage.getItem(AI_KEY_STORE)) gk.placeholder='✓ Gemini sauvegardée';
+  if(pk&&localStorage.getItem(PEXELS_KEY_STORE)) pk.placeholder='✓ Pexels sauvegardée';
 }
 
 function renderAIHistory(){
   const hist=JSON.parse(localStorage.getItem(AI_HIST_STORE)||'[]');
-  const el=document.getElementById('ai-history');
-  const list=document.getElementById('ai-history-list');
-  if(!hist.length){el.style.display='none';return;}
-  el.style.display='block';
+  const toggleBtn=document.getElementById('ai-history-toggle');
+  if(!hist.length){ if(toggleBtn)toggleBtn.style.display='none'; return; }
+  if(toggleBtn)toggleBtn.style.display='block';
   const fmt=d=>{const[,m,day]=d.split('-');const n=['jan','fév','mar','avr','mai','juin','juil','aoû','sep','oct','nov','déc'];return parseInt(day)+' '+n[parseInt(m)-1];};
-  list.innerHTML=hist.map(h=>`<div class="ai-past-item"><div class="ai-past-date">${fmt(h.date)} · ${h.period||''}</div>${h.text}</div>`).join('');
+  const list=document.getElementById('ai-history-list');
+  list.innerHTML=hist.map(h=>`<div class="ai-past-item"><div class="ai-past-date">${fmt(h.date)}${h.period?' · '+h.period:''}</div><div class="ai-past-text">${h.text}</div></div>`).join('');
+}
+
+function toggleAIHistory(){
+  const el=document.getElementById('ai-history');
+  const btn=document.getElementById('ai-history-toggle');
+  const open=el.style.display==='block';
+  el.style.display=open?'none':'block';
+  btn.textContent=open?'Afficher analyses précédentes':'Masquer les analyses';
 }
 
 // ── Date nav ──
@@ -1597,6 +1645,35 @@ function stopReadNews() {
   const btn = document.getElementById('news-read-btn');
   if (btn) { btn.textContent = '🔊'; btn.classList.remove('playing'); }
 }
+
+// ── Swipe on news detail ─────────────────────────────────────────────────
+(function initNewsSwipe(){
+  let startX=0, startY=0;
+  const getSheet=()=>document.getElementById('news-detail-sheet');
+  document.addEventListener('touchstart', e=>{
+    const sheet=getSheet();
+    if(sheet && sheet.contains(e.target)){
+      startX=e.touches[0].clientX;
+      startY=e.touches[0].clientY;
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', e=>{
+    const sheet=getSheet();
+    if(!sheet || !sheet.contains(e.changedTouches[0].target)) return;
+    const dx=e.changedTouches[0].clientX-startX;
+    const dy=Math.abs(e.changedTouches[0].clientY-startY);
+    if(Math.abs(dx)<50 || dy>Math.abs(dx)) return; // not a horizontal swipe
+    if(dx<0 && newsIdx<newsData.length-1){ // swipe left = next
+      sheet.style.transition='transform .2s ease';
+      sheet.style.transform='translateX(-30px)';
+      setTimeout(()=>{sheet.style.transform='';sheet.style.transition='';newsNav(1);},150);
+    } else if(dx>0 && newsIdx>0){ // swipe right = prev
+      sheet.style.transition='transform .2s ease';
+      sheet.style.transform='translateX(30px)';
+      setTimeout(()=>{sheet.style.transform='';sheet.style.transition='';newsNav(-1);},150);
+    }
+  }, {passive:true});
+})();
 function closeNewsIfBg(e) {
   if (e.target === document.getElementById('news-overlay')) closeNews();
 }
@@ -1637,7 +1714,8 @@ function renderNewsDetail() {
   document.getElementById('news-next-btn').disabled = newsIdx === newsData.length - 1;
 }
 
-async function genNews() {
+async function genNews(period) {
+  period = period || 'day';
   const key = localStorage.getItem(AI_KEY_STORE);
   if (!key) { alert("Entre ta clé Gemini dans l'onglet IA d'abord."); return; }
   const btn = document.getElementById('news-gen-btn');
@@ -1647,7 +1725,8 @@ async function genNews() {
   document.getElementById('news-list').innerHTML = '';
 
   const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites recentes de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."}]}';
+  const periodLabel = period==='week'?'de la semaine':period==='month'?'du mois':'de la journée';
+  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."}]}';
 
   try {
     const res = await fetch(
