@@ -169,11 +169,11 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .news-card.alsace { border-left:3px solid var(--orange); }
 .news-btn-row { display:flex; gap:5px; margin-bottom:4px; }
 .news-gen-btn {
-  flex:2; height:52px; background:linear-gradient(135deg,#1c1c1e,#2c2c2e);
+  flex:2; height:52px; background:linear-gradient(135deg,#0a84ff,#4da3ff);
   color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:500;
   cursor:pointer; font-family:inherit;
   display:flex; align-items:center; justify-content:center; gap:6px;
-  transition:opacity .15s; box-shadow:0 4px 14px rgba(0,0,0,.15);
+  transition:opacity .15s; box-shadow:0 4px 14px rgba(10,132,255,.25);
 }
 .news-period-btn {
   flex:1; height:52px; border:none; border-radius:14px; font-size:13px; font-weight:500;
@@ -181,7 +181,6 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 }
 .news-period-btn.week { background:linear-gradient(135deg,#2d5a3d,#3a7a52); color:#fff; box-shadow:0 4px 14px rgba(48,209,88,.2); }
 .news-period-btn.month { background:linear-gradient(135deg,#5a2d5a,#7a3a7a); color:#fff; box-shadow:0 4px 14px rgba(191,90,242,.2); }
-body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .news-gen-btn:active,.news-period-btn:active { opacity:.8; }
 .news-gen-btn:disabled,.news-period-btn:disabled { opacity:.4; cursor:not-allowed; }
 /* News detail overlay */
@@ -312,6 +311,8 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .ai-header { display:flex; align-items:center; justify-content:space-between; padding:8px 0 4px; }
 .ai-gear { background:none; border:none; color:var(--hint); font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
 .ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:20px 20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; overflow:visible; }
+.ai-card.lili { background:linear-gradient(145deg,#fff0f4,#ffe8f0); border-color:rgba(255,55,95,.25); box-shadow:0 2px 16px rgba(255,55,95,.08); }
+.ai-card.lili::before { color:var(--pink); }
 .ai-card::before { content:'✦'; position:absolute; right:18px; top:14px; font-size:28px; opacity:.1; color:#0a84ff; }
 .ai-profile-block { margin-bottom:10px; }
 .ai-profile-block:last-child { margin-bottom:0; }
@@ -494,12 +495,14 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
         <div class="hdate" id="ai-hdate"></div>
         <button class="ai-gear" onclick="openSettings()" title="Réglages">⚙</button>
       </header>
-      <div class="ai-card">
-        <div class="ai-badge">✦ Analyse IA</div>
-        <div id="ai-result-area">
-          <div class="ai-text" id="ai-text">Lance l'analyse pour obtenir un bilan personnalisé.</div>
-        </div>
+      <div class="ai-card" id="ai-card-coco">
+        <div class="ai-badge">✦ Analyse Coco</div>
+        <div class="ai-profile-text" id="ai-text-coco">Lance l'analyse pour obtenir un bilan.</div>
         <div class="ai-period" id="ai-period"></div>
+      </div>
+      <div class="ai-card lili" id="ai-card-lili" style="display:none;">
+        <div class="ai-badge" style="background:rgba(255,55,95,.1);color:var(--pink);">✦ Analyse Lili</div>
+        <div class="ai-profile-text" id="ai-text-lili"></div>
       </div>
       <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
       <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()" style="display:none;">Afficher analyses précédentes</button>
@@ -958,20 +961,22 @@ function savePexelsKey(){
 }
 
 function saveRepasGeminiKey(){
-  const v=document.getElementById('repas-gemini-input').value.trim();
+  const el=document.getElementById('repas-gemini-input'); if(!el)return;
+  const v=el.value.trim();
   if(!v)return;
   localStorage.setItem(AI_KEY_STORE,v); // same key as IA tab
-  const inp=document.getElementById('repas-gemini-input');
+  const inp=el;
   inp.value=''; inp.placeholder='✓ Clé sauvegardée';
   inp.style.borderColor='var(--green)';
   setTimeout(()=>{inp.style.borderColor='';},2000);
 }
 
 function saveRepasPexelsKey(){
-  const v=document.getElementById('repas-pexels-input').value.trim();
+  const el=document.getElementById('repas-pexels-input'); if(!el)return;
+  const v=el.value.trim();
   if(!v)return;
   localStorage.setItem(PEXELS_KEY_STORE,v);
-  const inp=document.getElementById('repas-pexels-input');
+  const inp=el;
   inp.value=''; inp.placeholder='✓ Clé Pexels sauvegardée';
   inp.style.borderColor='var(--green)';
   setTimeout(()=>{inp.style.borderColor='';},2000);
@@ -1061,18 +1066,20 @@ async function runAI(){
     if(!res.ok){const err=await res.json();throw new Error(err.error?.message||res.statusText);}
     const data=await res.json();
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
-    // Render structured Coco + Lili blocks
-    const area=document.getElementById('ai-result-area');
+    // Split result into Coco / Lili cards
     const lines=result.split(/\n+/).filter(l=>l.trim());
-    // Try to detect Coco/Lili split
-    const cocoIdx=lines.findIndex(l=>/coco/i.test(l));
-    const liliIdx=lines.findIndex(l=>/lili/i.test(l));
-    if(cocoIdx>=0&&liliIdx>cocoIdx){
-      const cocoText=lines.slice(cocoIdx,liliIdx).join(' ');
-      const liliText=lines.slice(liliIdx).join(' ');
-      area.innerHTML=`<div class="ai-profile-block"><div class="ai-profile-name">Coco</div><div class="ai-profile-text">${cocoText}</div></div><hr class="ai-divider"><div class="ai-profile-block"><div class="ai-profile-name lili">Lili</div><div class="ai-profile-text">${liliText}</div></div>`;
+    const liliIdx=lines.findIndex((l,i)=>i>0&&/lili/i.test(l));
+    const cocoCard=document.getElementById('ai-card-coco');
+    const liliCard=document.getElementById('ai-card-lili');
+    const cocoEl=document.getElementById('ai-text-coco');
+    const liliEl=document.getElementById('ai-text-lili');
+    if(liliIdx>0){
+      cocoEl.textContent=lines.slice(0,liliIdx).join(' ');
+      liliEl.textContent=lines.slice(liliIdx).join(' ');
+      liliCard.style.display='block';
     } else {
-      area.innerHTML=`<div class="ai-profile-text">${result}</div>`;
+      cocoEl.textContent=result;
+      liliCard.style.display='none';
     }
     textEl.className='ai-text';
 
@@ -1089,7 +1096,7 @@ async function runAI(){
     localStorage.setItem(AI_HIST_STORE,JSON.stringify(hist));
     renderAIHistory();
   } catch(err){
-    textEl.className='ai-text';
+    textEl.className='ai-profile-text';
     textEl.textContent='Erreur : '+err.message;
   }
   btn.disabled=false;
@@ -1300,6 +1307,9 @@ function switchTab(t){
   document.getElementById('view-'+t).classList.add('on');
   const btn=document.getElementById('tab-'+t);btn.classList.add('on');
   if(P==='lili')btn.classList.add('pink');
+  // Hide profile pill on shared tabs
+  const pill=document.querySelector('.profile-pill');
+  if(pill) pill.style.visibility=['ai','news','repas'].includes(t)?'hidden':'visible';
   if(t==='stats')renderStats();
   if(t==='graph')setTimeout(renderGraph,50);
   if(t==='ai')renderAIView();
@@ -1307,8 +1317,6 @@ function switchTab(t){
   if(t==='repas'){
     document.getElementById('repas-input-screen').style.display='flex';
     document.getElementById('repas-bubbles-screen').classList.remove('show');
-    if(localStorage.getItem(AI_KEY_STORE)) document.getElementById('repas-gemini-input').placeholder='✓ Clé Gemini sauvegardée';
-    if(localStorage.getItem(PEXELS_KEY_STORE)) document.getElementById('repas-pexels-input').placeholder='✓ Clé Pexels sauvegardée';
   }
 }
 
