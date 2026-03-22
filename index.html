@@ -1803,7 +1803,7 @@ async function fetchRepas(key, prompt) {
 
 function parseRepasJSON(raw) {
   // Step 1: strip markdown fences
-  let s = raw.replace('','').split('json','').replace('').join('').trim();
+  let s = raw.split('```json').join('').split('```').join('').trim();
   // Step 2: find outermost [ ... ]
   const a = s.indexOf('['), b = s.lastIndexOf(']');
   if (a === -1 || b === -1) throw new Error('Format inattendu de Gemini.');
@@ -2063,16 +2063,16 @@ async function fetchRSS(url) {
 
 async function fetchNewsAPI(apiKey, query, period) {
   if (!apiKey) return [];
-  const from = new Date();
-  if (period === 'week') from.setDate(from.getDate() - 7);
-  else if (period === 'month') from.setDate(from.getDate() - 30);
-  const fromStr = from.toISOString().slice(0, 10);
+  const max = period === 'month' ? 30 : period === 'week' ? 7 : 1;
   try {
+    // GNews API — free, CORS-enabled, works from browser
     const r = await fetch(
-      'https://newsapi.org/v2/everything?q=' + encodeURIComponent(query)
-      + '&from=' + fromStr + '&language=fr&sortBy=publishedAt&pageSize=4&apiKey=' + apiKey
+      'https://gnews.io/api/v4/search?q=' + encodeURIComponent(query)
+      + '&lang=fr&max=4&from=' + (function(){const d=new Date();d.setDate(d.getDate()-max);return d.toISOString();})()
+      + '&token=' + apiKey
     );
     const d = await r.json();
+    if (d.errors) return [];
     return (d.articles || []).slice(0, 4).map(function(a) {
       return {
         title: a.title || '',
@@ -2110,7 +2110,7 @@ async function genNews(period) {
   try {
     // NewsAPI only — no RSS
     if (!newsApiKey) {
-      alert('Entre ta cle NewsAPI dans les reglages pour obtenir de vraies news.');
+      alert('Entre ta cle GNews (gnews.io) dans les reglages pour obtenir de vraies news.');
       btn.disabled = false;
       loading.style.display = 'none';
       return;
@@ -2130,7 +2130,7 @@ async function genNews(period) {
     const nl = '\n';
 
     if (!hasNews) {
-      alert('Aucune actualite trouvee via NewsAPI. Verifie ta cle dans les reglages.');
+      alert('Aucune actualite trouvee. Verifie ta cle GNews dans les reglages.');
       btn.disabled = false;
       loading.style.display = 'none';
       return;
