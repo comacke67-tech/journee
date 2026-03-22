@@ -2109,35 +2109,46 @@ async function genNews(period) {
     : 'du jour (' + today + ')';
 
   try {
-    const [mondeRSS, franceRSS, alsaceRSS,
-           mondeAPI, franceAPI, alsaceAPI] = await Promise.all([
-      fetchRSS(RSS_FEEDS.monde),
-      fetchRSS(RSS_FEEDS.france),
-      fetchRSS(RSS_FEEDS.alsace),
-      fetchNewsAPI(newsApiKey, 'actualite internationale', period),
-      fetchNewsAPI(newsApiKey, 'actualite France', period),
+    // NewsAPI only — no RSS
+    if (!newsApiKey) {
+      alert('Entre ta cle NewsAPI dans les reglages pour obtenir de vraies news.');
+      btn.disabled = false;
+      loading.style.display = 'none';
+      return;
+    }
+
+    const [mondeAPI, franceAPI, alsaceAPI] = await Promise.all([
+      fetchNewsAPI(newsApiKey, 'world international', period),
+      fetchNewsAPI(newsApiKey, 'France politique economie', period),
       fetchNewsAPI(newsApiKey, 'Alsace Strasbourg', period)
     ]);
 
-    const mondeItems  = mondeRSS.concat(mondeAPI).slice(0, 5);
-    const franceItems = franceRSS.concat(franceAPI).slice(0, 5);
-    const alsaceItems = alsaceRSS.concat(alsaceAPI).slice(0, 5);
+    const mondeItems  = mondeAPI.slice(0, 4);
+    const franceItems = franceAPI.slice(0, 4);
+    const alsaceItems = alsaceAPI.slice(0, 4);
 
     const hasNews = mondeItems.length + franceItems.length + alsaceItems.length > 0;
     const nl = '\n';
-    const headlineBlock = hasNews
-      ? nl + 'ACTUALITES REELLES TROUVEES :' + nl
-        + 'MONDE:' + nl + (mondeItems.length ? fmtHeadlines(mondeItems) : 'aucune') + nl
-        + 'FRANCE:' + nl + (franceItems.length ? fmtHeadlines(franceItems) : 'aucune') + nl
-        + 'ALSACE:' + nl + (alsaceItems.length ? fmtHeadlines(alsaceItems) : 'aucune')
-      : '';
+
+    if (!hasNews) {
+      alert('Aucune actualite trouvee via NewsAPI. Verifie ta cle dans les reglages.');
+      btn.disabled = false;
+      loading.style.display = 'none';
+      return;
+    }
+
+    const headlineBlock = nl + 'ACTUALITES REELLES NEWSAPI :' + nl
+      + 'MONDE:' + nl + (mondeItems.length ? fmtHeadlines(mondeItems) : 'aucune') + nl
+      + 'FRANCE:' + nl + (franceItems.length ? fmtHeadlines(franceItems) : 'aucune') + nl
+      + 'ALSACE:' + nl + (alsaceItems.length ? fmtHeadlines(alsaceItems) : 'aucune');
 
     const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le ' + today + '.'
-      + ' Resume les actualites ' + periodLabel + ' style Hugo Decrypte : simple, direct, explicatif.'
+      + ' Voici de VRAIES actualites ' + periodLabel + ' provenant de NewsAPI. Explique chaque article de maniere simple et directe (style Hugo Decrypte).'
       + headlineBlock
+      + nl + 'IMPORTANT : utilise EXACTEMENT les titres, sources et URLs fournis ci-dessus. Ne les invente pas.'
       + nl + 'Reponds UNIQUEMENT en JSON valide sans markdown :'
       + ' {"news":['
-      + '{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"monde","title":"titre exact de l article","body":"explication 3-4 phrases. Source : ' + (mondeItems[0] ? mondeItems[0].source : 'media') + ', JJ/MM/AAAA, ' + (mondeItems[0] ? mondeItems[0].url : 'https://url') + '"},'
       + '{"cat":"monde","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
       + '{"cat":"france","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
       + '{"cat":"france","title":"titre","body":"explication. Source : media, JJ/MM/AAAA, https://url"},'
