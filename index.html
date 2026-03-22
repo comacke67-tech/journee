@@ -689,7 +689,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <button class="ai-key-save" onclick="savePexelsKey()">Sauver</button>
       </div>
       <div class="ai-key-row">
-        <input class="ai-key-input" id="newsapi-key-input" type="password" placeholder="NewsAPI.org (actualités)">
+        <input class="ai-key-input" id="newsapi-key-input" type="password" placeholder="GNews API (gnews.io)">
         <button class="ai-key-save" onclick="saveNewsApiKey()">Sauver</button>
       </div>
     </div>
@@ -1032,7 +1032,7 @@ function saveNewsApiKey(){
   if(!v)return;
   localStorage.setItem(NEWSAPI_KEY_STORE,v);
   const inp=document.getElementById('newsapi-key-input');
-  inp.value=''; inp.placeholder='✓ Clé NewsAPI sauvegardée';
+  inp.value=''; inp.placeholder='✓ Clé GNews sauvegardée';
   inp.style.borderColor='var(--green)';
   setTimeout(()=>{inp.style.borderColor='';},2000);
 }
@@ -2039,7 +2039,7 @@ function renderNewsDetail() {
   document.getElementById('news-next-btn').disabled = newsIdx === newsData.length - 1;
 }
 
-// ── RSS + NewsAPI helpers ────────────────────────────────────────────────────
+// ── GNews helpers ────────────────────────────────────────────────────
 const RSS_FEEDS = {
   monde: 'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/world/rss.xml&count=5',
   france: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.franceinfo.fr/rss&count=5',
@@ -2108,7 +2108,7 @@ async function genNews(period) {
     : 'du jour (' + today + ')';
 
   try {
-    // NewsAPI only — no RSS
+    // GNews only
     if (!newsApiKey) {
       alert('Entre ta cle GNews (gnews.io) dans les reglages pour obtenir de vraies news.');
       btn.disabled = false;
@@ -2142,7 +2142,7 @@ async function genNews(period) {
       + 'ALSACE:' + nl + (alsaceItems.length ? fmtHeadlines(alsaceItems) : 'aucune');
 
     const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le ' + today + '.'
-      + ' Voici de VRAIES actualites ' + periodLabel + ' provenant de NewsAPI. Explique chaque article de maniere simple et directe (style Hugo Decrypte).'
+      + ' Voici de VRAIES actualites ' + periodLabel + ' provenant de GNews. Explique chaque article de maniere simple et directe (style Hugo Decrypte).'
       + headlineBlock
       + nl + 'IMPORTANT : utilise EXACTEMENT les titres, sources et URLs fournis ci-dessus. Ne les invente pas.'
       + nl + 'Reponds UNIQUEMENT en JSON valide sans markdown :'
