@@ -334,7 +334,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-view { display:flex; flex-direction:column; }
 .ai-header { display:flex; align-items:center; justify-content:space-between; padding:8px 0 4px; }
 .ai-gear { background:none; border:none; color:var(--hint); font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
-.ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; overflow:visible; min-height:120px; display:flex; flex-direction:column; }
+.ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:22px 20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; }
 .ai-card.lili { background:linear-gradient(145deg,#fff0f4,#ffe8f0); border-color:rgba(255,55,95,.25); box-shadow:0 2px 16px rgba(255,55,95,.08); }
 .ai-card.lili::before { color:var(--pink); }
 .ai-card::before { content:'✦'; position:absolute; right:18px; top:14px; font-size:28px; opacity:.1; color:#0a84ff; }
@@ -342,7 +342,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-profile-block:last-child { margin-bottom:0; }
 .ai-profile-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--blue); margin-bottom:4px; }
 .ai-profile-name.lili { color:var(--pink); }
-.ai-profile-text { font-size:15px; font-weight:400; line-height:1.65; color:var(--text); flex:1; }
+.ai-profile-text { font-size:15px; font-weight:400; line-height:1.75; color:var(--text); white-space:pre-wrap; }
 .ai-divider { border:none; border-top:1px solid rgba(10,132,255,.15); margin:12px 0; }
 .ai-intro { font-size:13px; color:var(--sub); margin-bottom:12px; }
 .ai-text { font-size:17px; font-weight:300; line-height:1.6; color:var(--text); }
@@ -536,11 +536,11 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <button class="ai-gear" onclick="openSettings()" title="Réglages">⚙</button>
       </header>
       <div class="ai-card" id="ai-card-coco">
-        <div class="ai-profile-text" id="ai-text-coco" style="font-style:italic;color:var(--hint);display:flex;align-items:center;justify-content:center;text-align:center;height:100%;flex:1;">Cliquer sur Analyser</div>
+        <div class="ai-profile-text" id="ai-text-coco" style="font-style:italic;color:var(--hint);text-align:center;padding:24px 0;">Cliquer sur Analyser</div>
         <div class="ai-period" id="ai-period"></div>
       </div>
       <div class="ai-card lili" id="ai-card-lili">
-        <div class="ai-profile-text" id="ai-text-lili" style="font-style:italic;color:var(--hint);display:flex;align-items:center;justify-content:center;text-align:center;height:100%;flex:1;">Cliquer sur Analyser</div>
+        <div class="ai-profile-text" id="ai-text-lili" style="font-style:italic;color:var(--hint);text-align:center;padding:24px 0;">Cliquer sur Analyser</div>
       </div>
       <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
       <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()">Afficher analyses précédentes</button>
@@ -1169,10 +1169,16 @@ async function runAI(){
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
 
     // Split on double newline = 2 distinct paragraphs
-    const formatBlock = txt => txt
-      .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm, '<strong>$1</strong>')
-      .replace(/^(→\s*ACTION\s*:)/gm, '<strong style="color:var(--blue)">$1</strong>')
-      .replace(/\n/g,'<br>');
+    const formatBlock = txt => {
+      // Remove any stray === markers Gemini might include
+      let t = txt.replace(/===\w+===/g,'').trim();
+      return t
+        .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ][A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm,
+          '<strong style="font-size:12px;letter-spacing:.05em;opacity:.7;">$1</strong>')
+        .replace(/^(→\s*ACTION\s*:.*)/gm,
+          '<div style="margin-top:10px;padding:8px 12px;background:rgba(10,132,255,.08);border-radius:8px;font-size:14px;font-weight:500;color:var(--blue);">$1</div>')
+        .replace(/\n/g,'<br>');
+    };
     // Extract using clear separators
     const cocoMatch = result.match(/===COCO===([\s\S]*?)===FIN_COCO===/);
     const liliMatch = result.match(/===LILI===([\s\S]*?)===FIN_LILI===/);
@@ -1235,7 +1241,28 @@ function renderAIHistory(){
   if(toggleBtn)toggleBtn.style.display='block';
   const fmt=d=>{const[,m,day]=d.split('-');const n=['jan','fév','mar','avr','mai','juin','juil','aoû','sep','oct','nov','déc'];return parseInt(day)+' '+n[parseInt(m)-1];};
   const list=document.getElementById('ai-history-list');
-  list.innerHTML=hist.map(h=>`<div class="ai-past-item"><div class="ai-past-date">${fmt(h.date)}${h.period?' · '+h.period:''}</div><div class="ai-past-text">${h.text}</div></div>`).join('');
+  list.innerHTML=hist.map(h=>{
+    // Clean raw text: remove === markers, format for history display
+    const clean = (h.text||'')
+      .replace(/===\w+===/g,'')
+      .replace(/\n{3,}/g,'\n\n')
+      .trim();
+    // Extract Coco and Lili parts
+    const cocoM = (h.text||'').match(/===COCO===([\s\S]*?)===FIN_COCO===/);
+    const liliM = (h.text||'').match(/===LILI===([\s\S]*?)===FIN_LILI===/);
+    const renderPart = (label,txt,color) =>
+      '<div style="margin-bottom:8px;">'
+      +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:'+color+';margin-bottom:4px;">'+label+'</div>'
+      +'<div style="font-size:13px;line-height:1.6;color:var(--sub);white-space:pre-wrap;">'+txt.replace(/===\w+===/g,'').trim()+'</div>'
+      +'</div>';
+    const body = (cocoM && liliM)
+      ? renderPart('Coco','#0a84ff',cocoM[1])+renderPart('Lili','#ff375f',liliM[1])
+      : '<div style="font-size:13px;line-height:1.6;color:var(--sub);white-space:pre-wrap;">'+clean+'</div>';
+    return '<div class="ai-past-item">'
+      +'<div class="ai-past-date">'+fmt(h.date)+(h.period?' · '+h.period:'')+'</div>'
+      +body
+      +'</div>';
+  }).join('');
 }
 
 const SHEET_PASSWORD = 'journee2025'; // change this to your password
@@ -2008,8 +2035,14 @@ async function genNews(period) {
   document.getElementById('news-list').innerHTML = '';
 
   const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const periodLabel = period==='week'?'de la semaine':period==='month'?'du mois':'de la journée';
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+'.'
+  const now2 = new Date();
+  const dayNames = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  const periodLabel = period==='week'
+    ? 'des 7 derniers jours (semaine du '+today+')'
+    : period==='month'
+    ? 'des 30 derniers jours (mois de '+now2.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})+')'
+    : 'du jour du '+dayNames[now2.getDay()]+' '+today+' UNIQUEMENT - pas d actualite anterieure';
+  const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le '+today+'. Utilise ta recherche Google pour trouver de VRAIES actualites recentes. Cherche des actualites reelles '+periodLabel+'.'
     +' Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour.'
     +' REGLES IMPORTANTES : (1) Les URLs doivent etre COMPLETES et VERIFIABLES - commence toujours par https://, inclus le domaine complet et le chemin de l article reel - NE PAS inventer des URLs.'
     +' (2) La date de l article doit etre au format JJ/MM/AAAA avec l annee complete sur 4 chiffres.'
@@ -2030,7 +2063,8 @@ async function genNews(period) {
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           contents: [{role:'user', parts:[{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 4000, temperature: 0.7, responseMimeType:'application/json'}
+          generationConfig: {maxOutputTokens: 4000, temperature: 0.7, responseMimeType:'application/json'},
+          tools: [{google_search: {}}]
         })
       }
     );
