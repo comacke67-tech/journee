@@ -496,8 +496,8 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <button class="ai-gear" onclick="openSettings()" title="Réglages">⚙</button>
       </header>
       <div class="ai-card" id="ai-card-coco">
-        <div class="ai-badge">✦ Analyse Coco</div>
-        <div class="ai-profile-text" id="ai-text-coco">Lance l'analyse pour obtenir un bilan.</div>
+        <div class="ai-badge">✦ Analyse</div>
+        <div class="ai-profile-text" id="ai-text-coco">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
         <div class="ai-period" id="ai-period"></div>
       </div>
       <div class="ai-card lili" id="ai-card-lili" style="display:none;">
@@ -1034,21 +1034,26 @@ Données :${dataSummary}`;
 }
 
 async function runAI(){
+  const cocoEl=document.getElementById('ai-text-coco');
+  const liliEl=document.getElementById('ai-text-lili');
+  const liliCard=document.getElementById('ai-card-lili');
+  const btn=document.getElementById('ai-btn');
+
   const key=localStorage.getItem(AI_KEY_STORE);
   if(!key){
-    document.getElementById('ai-text').textContent='Entre ta clé API Gemini ci-dessous pour activer l\'analyse IA.';
+    cocoEl.textContent='Entre ta clé API Gemini dans les réglages ⚙ pour activer l\'analyse.';
     return;
   }
   const prompt=buildPrompt();
   if(!prompt){
-    document.getElementById('ai-text').textContent='Pas encore assez de données. Reviens après quelques jours de saisie !';
+    cocoEl.textContent='Pas encore assez de données. Reviens après quelques jours de saisie !';
     return;
   }
-  const btn=document.getElementById('ai-btn');
-  const textEl=document.getElementById('ai-text');
+
   btn.disabled=true;
-  textEl.className='ai-text loading';
-  textEl.textContent='Analyse en cours…';
+  cocoEl.className='ai-profile-text loading';
+  cocoEl.textContent='Analyse en cours…';
+  liliCard.style.display='none';
   document.getElementById('ai-period').textContent='';
 
   try{
@@ -1063,16 +1068,14 @@ async function runAI(){
         })
       }
     );
-    if(!res.ok){const err=await res.json();throw new Error(err.error?.message||res.statusText);}
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||res.statusText);}
     const data=await res.json();
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
-    // Split result into Coco / Lili cards
+
+    // Split into Coco / Lili blocks
     const lines=result.split(/\n+/).filter(l=>l.trim());
     const liliIdx=lines.findIndex((l,i)=>i>0&&/lili/i.test(l));
-    const cocoCard=document.getElementById('ai-card-coco');
-    const liliCard=document.getElementById('ai-card-lili');
-    const cocoEl=document.getElementById('ai-text-coco');
-    const liliEl=document.getElementById('ai-text-lili');
+    cocoEl.className='ai-profile-text';
     if(liliIdx>0){
       cocoEl.textContent=lines.slice(0,liliIdx).join(' ');
       liliEl.textContent=lines.slice(liliIdx).join(' ');
@@ -1081,23 +1084,20 @@ async function runAI(){
       cocoEl.textContent=result;
       liliCard.style.display='none';
     }
-    textEl.className='ai-text';
 
-    // Determine period label
     const totalEntries=['coco','lili'].flatMap(pr=>getDBFor(pr));
     const maxN=Math.min(totalEntries.length,30);
     const period=maxN<=7?'7 derniers jours':maxN<=14?'14 derniers jours':'30 derniers jours';
     document.getElementById('ai-period').textContent='Basé sur les '+period;
 
-    // Save to history
     const hist=JSON.parse(localStorage.getItem(AI_HIST_STORE)||'[]');
     hist.unshift({date:todayStr(),text:result,period});
     if(hist.length>5)hist.pop();
     localStorage.setItem(AI_HIST_STORE,JSON.stringify(hist));
     renderAIHistory();
   } catch(err){
-    textEl.className='ai-profile-text';
-    textEl.textContent='Erreur : '+err.message;
+    cocoEl.className='ai-profile-text';
+    cocoEl.textContent='Erreur : '+err.message;
   }
   btn.disabled=false;
 }
