@@ -688,6 +688,10 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <input class="ai-key-input" id="pexels-key-input" type="password" placeholder="Pexels (photos recettes)">
         <button class="ai-key-save" onclick="savePexelsKey()">Sauver</button>
       </div>
+      <div class="ai-key-row">
+        <input class="ai-key-input" id="newsapi-key-input" type="password" placeholder="NewsAPI.org (actualités)">
+        <button class="ai-key-save" onclick="saveNewsApiKey()">Sauver</button>
+      </div>
     </div>
   </div>
 </div>
@@ -999,7 +1003,8 @@ function closeSettingsIfBg(e){ if(e.target===document.getElementById('settings-o
 const AI_KEY_STORE    = 'mj_ai_key';
 const PEXELS_KEY_STORE  = 'mj_pexels_key';
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/18_OTntwrxEphWegjWP36i-dv61bRocnIy3B0GtuhtuM/edit?usp=sharing';
-const SHEET_PWD_STORE = 'mj_sheet_pwd';
+const SHEET_PWD_STORE  = 'mj_sheet_pwd';
+const NEWSAPI_KEY_STORE = 'mj_newsapi_key';
 const AI_HIST_STORE = 'mj_ai_history';
 
 function saveKey(){
@@ -1018,6 +1023,16 @@ function savePexelsKey(){
   localStorage.setItem(PEXELS_KEY_STORE,v);
   const inp=document.getElementById('pexels-key-input');
   inp.value=''; inp.placeholder='✓ Clé Pexels sauvegardée';
+  inp.style.borderColor='var(--green)';
+  setTimeout(()=>{inp.style.borderColor='';},2000);
+}
+
+function saveNewsApiKey(){
+  const v=document.getElementById('newsapi-key-input').value.trim();
+  if(!v)return;
+  localStorage.setItem(NEWSAPI_KEY_STORE,v);
+  const inp=document.getElementById('newsapi-key-input');
+  inp.value=''; inp.placeholder='✓ Clé NewsAPI sauvegardée';
   inp.style.borderColor='var(--green)';
   setTimeout(()=>{inp.style.borderColor='';},2000);
 }
@@ -2024,38 +2039,113 @@ function renderNewsDetail() {
   document.getElementById('news-next-btn').disabled = newsIdx === newsData.length - 1;
 }
 
+// ── RSS + NewsAPI helpers ────────────────────────────────────────────────────
+const RSS_FEEDS = {
+  monde: [
+    'https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/world/rss.xml&count=5',
+    'https://api.rss2json.com/v1/api.json?rss_url=https://www.lemonde.fr/rss/une.xml&count=5'
+  ],
+  france: [
+    'https://api.rss2json.com/v1/api.json?rss_url=https://www.franceinfo.fr/rss&count=5',
+    'https://api.rss2json.com/v1/api.json?rss_url=https://www.lefigaro.fr/rss/figaro_actualites.xml&count=5'
+  ],
+  alsace: [
+    'https://api.rss2json.com/v1/api.json?rss_url=https://www.dna.fr/rss&count=5',
+    'https://api.rss2json.com/v1/api.json?rss_url=https://www.francebleu.fr/rss/alsace/actualites.xml&count=5'
+  ]
+};
+
+async function fetchRSS(url) {
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    return (d.items||[]).slice(0,3).map(i=>({
+      title: i.title||'',
+      url: i.link||'',
+      date: i.pubDate ? new Date(i.pubDate).toLocaleDateString('fr-FR') : '',
+      source: (new URL(i.link||'https://x.com')).hostname.replace('www.','')
+    }));
+  } catch(e) { return []; }
+}
+
+async function fetchNewsAPI(key, query, period) {
+  if (!key) return [];
+  const from = new Date();
+  if (period==='week') from.setDate(from.getDate()-7);
+  else if (period==='month') from.setDate(from.getDate()-30);
+  const fromStr = from.toISOString().slice(0,10);
+  try {
+    const r = await fetch(
+      'https://newsapi.org/v2/everything?q='+encodeURIComponent(query)+'&from='+fromStr+'&language=fr&sortBy=publishedAt&pageSize=3&apiKey='+key
+    );
+    const d = await r.json();
+    return (d.articles||[]).slice(0,3).map(a=>({
+      title: a.title||'',
+      url: a.url||'',
+      date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('fr-FR') : '',
+      source: a.source?.name||''
+    }));
+  } catch(e) { return []; }
+}
+
+function formatHeadlines(items) {
+  return items.map(function(i){return '- '+i.title+' ('+i.source+(i.date?', '+i.date:'')+') '+i.url;}).join('\n');
+
 async function genNews(period) {
   period = period || 'day';
   const key = localStorage.getItem(AI_KEY_STORE);
-  if (!key) { alert("Entre ta clé Gemini dans l'onglet IA d'abord."); return; }
+  if (!key) { alert("Entre ta clé Gemini dans les réglages ⚙."); return; }
+  const newsApiKey = localStorage.getItem(NEWSAPI_KEY_STORE);
   const btn = document.getElementById('news-gen-btn');
   const loading = document.getElementById('news-loading');
   btn.disabled = true;
   loading.style.display = 'block';
   document.getElementById('news-list').innerHTML = '';
 
-  const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const now2 = new Date();
-  const dayNames = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-  const periodLabel = period==='week'
-    ? 'des 7 derniers jours (semaine du '+today+')'
-    : period==='month'
-    ? 'des 30 derniers jours (mois de '+now2.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})+')'
-    : 'du jour du '+dayNames[now2.getDay()]+' '+today+' UNIQUEMENT - pas d actualite anterieure';
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le '+today+'. Utilise ta recherche Google pour trouver de VRAIES actualites recentes. Cherche des actualites reelles '+periodLabel+'.'
-    +' Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour.'
-    +' REGLES IMPORTANTES : (1) Les URLs doivent etre COMPLETES et VERIFIABLES - commence toujours par https://, inclus le domaine complet et le chemin de l article reel - NE PAS inventer des URLs.'
-    +' (2) La date de l article doit etre au format JJ/MM/AAAA avec l annee complete sur 4 chiffres.'
-    +' Format JSON exact : {"news":['
-    +' {"cat":"monde","title":"titre court","body":"explication 3-4 phrases. Source : nom-du-media.fr, date JJ/MM/AAAA, https://url-complete-et-reelle"},'
-    +' {"cat":"monde","title":"titre court","body":"explication. Source : nom-du-media.fr, date JJ/MM/AAAA, https://url-complete-et-reelle"},'
-    +' {"cat":"france","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
-    +' {"cat":"france","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
-    +' {"cat":"alsace","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
-    +' {"cat":"alsace","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"}'
-    +']}';
+  const today = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   try {
+    // ── Fetch real headlines in parallel ──────────────────────────────────
+    const [mondeRSS, franceRSS, alsaceRSS,
+           mondeAPI, franceAPI, alsaceAPI] = await Promise.all([
+      fetchRSS(RSS_FEEDS.monde[0]),
+      fetchRSS(RSS_FEEDS.france[0]),
+      fetchRSS(RSS_FEEDS.alsace[0]),
+      fetchNewsAPI(newsApiKey, 'actualité internationale', period),
+      fetchNewsAPI(newsApiKey, 'actualité France', period),
+      fetchNewsAPI(newsApiKey, 'Alsace Strasbourg', period)
+    ]);
+
+    const mondeItems  = [...mondeRSS,  ...mondeAPI ].slice(0,5);
+    const franceItems = [...franceRSS, ...franceAPI].slice(0,5);
+    const alsaceItems = [...alsaceRSS, ...alsaceAPI].slice(0,5);
+
+    const hasRealNews = mondeItems.length>0 || franceItems.length>0 || alsaceItems.length>0;
+
+    // ── Build prompt with real headlines ─────────────────────────────────
+    const nl='\n';
+    const headlineBlock = hasRealNews
+      ? nl+nl+'VOICI LES VRAIES ACTUALITES DU JOUR :'+nl
+        + 'MONDE:'+nl + (mondeItems.length ? formatHeadlines(mondeItems) : 'aucune trouvee') + nl
+        + 'FRANCE:'+nl + (franceItems.length ? formatHeadlines(franceItems) : 'aucune trouvee') + nl
+        + 'ALSACE:'+nl + (alsaceItems.length ? formatHeadlines(alsaceItems) : 'aucune trouvee')
+      : '';
+
+    const periodLabel = period==='week' ? 'de la semaine'
+      : period==='month' ? 'du mois' : 'du jour ('+today+')';
+
+    const nl2='\n';
+    const prompt = 'Tu es journaliste comme Hugo Decrypte. Nous sommes le '+today+'. Fais un recap des actualites '+periodLabel+' style Hugo Decrypte : simple, direct, explicatif.'
+      + headlineBlock
+      + nl2+nl2+'Consignes : utilise les titres et URLs fournis ci-dessus. Ne reponds UNIQUEMENT qu en JSON valide sans markdown.'
+      + ' Format : {"news":['
+      + '{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : nom-media, JJ/MM/AAAA, https://url-exact"},'
+      + '{"cat":"monde","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url-exact"},'
+      + '{"cat":"france","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"france","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"alsace","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"},'
+      + '{"cat":"alsace","title":"titre","body":"explication. Source : nom-media, JJ/MM/AAAA, https://url"}'
+      + ']}';
     const res = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=' + encodeURIComponent(key),
       {
@@ -2063,8 +2153,7 @@ async function genNews(period) {
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           contents: [{role:'user', parts:[{text: prompt}]}],
-          generationConfig: {maxOutputTokens: 4000, temperature: 0.7, responseMimeType:'application/json'},
-          tools: [{google_search: {}}]
+          generationConfig: {maxOutputTokens: 4000, temperature: 0.5, responseMimeType:'application/json'}
         })
       }
     );
@@ -2075,8 +2164,7 @@ async function genNews(period) {
     const a = jsonStr.indexOf('{'), b = jsonStr.lastIndexOf('}');
     if (a === -1) throw new Error('Réponse invalide.');
     jsonStr = jsonStr.slice(a, b+1);
-    jsonStr = jsonStr.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, ' ');
-    // keep newlines as literal in JSON strings
+    jsonStr = jsonStr.replace(/[\x00-\x09\x0B-\x1F\x7F]/g,' ');
     const parsed = JSON.parse(jsonStr);
     newsData = parsed.news || [];
     localStorage.setItem(NEWS_STORE, JSON.stringify(newsData));
