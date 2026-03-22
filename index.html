@@ -1033,15 +1033,18 @@ ${name} (${n} entrées) :
 
   return `Tu es un assistant de suivi santé direct et pédagogique. Analyse ces données (sport, alimentation, sommeil, stress, humeur — notés 1 à 3, 3 = excellent).
 
-Règles STRICTES :
-- Ton = direct, factuel, pédagogique. PAS de langage thérapeutique
+Règles STRICTES de FORMAT (respecte-les absolument) :
+- Ton = direct, factuel. PAS de langage thérapeutique
 - Détecte et signale les alertes : sport absent, alimentation mauvaise, stress qui monte, sommeil dégradé
-- Choisis la période la plus pertinente (7j, 14j ou 30j) selon la densité des données
-- Réponds OBLIGATOIREMENT en 2 paragraphes séparés par une ligne vide
-- PARAGRAPHE 1 = analyse de COCO uniquement (3-4 phrases, termine par 1 action concrète)
-- PARAGRAPHE 2 = analyse de LILI uniquement (3-4 phrases, termine par 1 action concrète)
+- Choisis la période la plus pertinente (7j, 14j ou 30j)
+- STRUCTURE OBLIGATOIRE : 2 blocs séparés par une ligne vide (un pour COCO, un pour LILI)
+- Dans chaque bloc : regroupe les observations par thème
+- Chaque thème commence par le mot-clé EN MAJUSCULES suivi de ":" sur sa propre ligne (ex: "SPORT :", "SOMMEIL :", "ALIMENTATION :", "STRESS :", "HUMEUR :")
+- Sous chaque mot-clé : 1 à 2 phrases directes sur ce thème
+- Saute une ligne entre chaque thème
+- Termine chaque bloc par "→ ACTION : " suivi d'une action concrète
 - Si un profil n'a pas de données, écris juste "Pas encore de données."
-- Aucun titre, aucune liste, uniquement 2 paragraphes en texte brut séparés par une ligne vide
+- PAS de markdown, PAS de *, PAS de #, uniquement du texte brut structuré
 
 Données :${dataSummary}`;
 }
@@ -1065,7 +1068,11 @@ async function runAI(){
 
   btn.disabled=true;
   cocoEl.className='ai-profile-text loading';
+  cocoEl.style.fontStyle='italic'; cocoEl.style.color='';
   cocoEl.textContent='Analyse en cours…';
+  liliEl.className='ai-profile-text loading';
+  liliEl.style.fontStyle='italic'; liliEl.style.color='';
+  liliEl.textContent='Analyse en cours…';
   document.getElementById('ai-period').textContent='';
 
   try{
@@ -1086,14 +1093,24 @@ async function runAI(){
 
     // Split on double newline = 2 distinct paragraphs
     const parts=result.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
+    const formatBlock = txt => {
+      // Bold keyword lines (SPORT :, SOMMEIL :, etc.) + preserve newlines
+      return txt
+        .replace(/^([A-ZÀÂÉÈÊËÎÏÔÙÛÜÇ ]+\s*:)/gm, '<strong>$1</strong>')
+        .replace(/^(→ ACTION\s*:)/gm, '<strong style="color:var(--blue)">$1</strong>')
+        .replace(/\n/g,'<br>');
+    };
     cocoEl.className='ai-profile-text';
+    cocoEl.style.fontStyle=''; cocoEl.style.color='';
+    liliEl.style.fontStyle=''; liliEl.style.color='';
     if(parts.length>=2){
-      cocoEl.textContent=parts[0];
-      liliEl.textContent=parts[1];
+      cocoEl.innerHTML=formatBlock(parts[0]);
+      liliEl.innerHTML=formatBlock(parts[1]);
     } else {
-      cocoEl.textContent=parts[0]||result;
-      liliEl.textContent='';
+      cocoEl.innerHTML=formatBlock(parts[0]||result);
+      liliEl.innerHTML='';
     }
+    liliEl.className='ai-profile-text';
 
     const totalEntries=['coco','lili'].flatMap(pr=>getDBFor(pr));
     const maxN=Math.min(totalEntries.length,30);
@@ -1149,7 +1166,15 @@ function closeConfirm(){
 function confirmDeleteHistory(){
   localStorage.removeItem(AI_HIST_STORE);
   closeConfirm();
-  renderAIHistory();
+  // Reset history list directly
+  const list=document.getElementById('ai-history-list');
+  if(list) list.innerHTML='';
+  const histEl=document.getElementById('ai-history');
+  if(histEl) histEl.style.display='none';
+  const toggleBtn=document.getElementById('ai-history-toggle');
+  if(toggleBtn){ toggleBtn.textContent='Afficher analyses précédentes'; }
+  const deleteBtn=document.getElementById('ai-delete-btn');
+  if(deleteBtn){ deleteBtn.style.opacity='0.35'; deleteBtn.style.cursor='default'; deleteBtn.onclick=null; }
 }
 
 function toggleAIHistory(){
@@ -1822,8 +1847,8 @@ async function genNews(period) {
     <div class="confirm-title">Supprimer ?</div>
     <div class="confirm-sub">irréversible</div>
     <div class="confirm-btns">
-      <button class="confirm-btn-no" onclick="closeConfirm()">Non</button>
       <button class="confirm-btn-yes" onclick="confirmDeleteHistory()">Oui</button>
+      <button class="confirm-btn-no" onclick="closeConfirm()">Non</button>
     </div>
   </div>
 </div>
