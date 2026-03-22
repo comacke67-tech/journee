@@ -310,7 +310,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-view { display:flex; flex-direction:column; }
 .ai-header { display:flex; align-items:center; justify-content:space-between; padding:8px 0 4px; }
 .ai-gear { background:none; border:none; color:var(--hint); font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
-.ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:20px 20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; overflow:visible; }
+.ai-card { background:linear-gradient(145deg,#e8f4ff,#f0eeff); border-radius:20px; padding:20px; margin-bottom:12px; border:2px solid rgba(10,132,255,.25); box-shadow:0 2px 16px rgba(10,132,255,.08); position:relative; overflow:visible; min-height:120px; display:flex; flex-direction:column; }
 .ai-card.lili { background:linear-gradient(145deg,#fff0f4,#ffe8f0); border-color:rgba(255,55,95,.25); box-shadow:0 2px 16px rgba(255,55,95,.08); }
 .ai-card.lili::before { color:var(--pink); }
 .ai-card::before { content:'✦'; position:absolute; right:18px; top:14px; font-size:28px; opacity:.1; color:#0a84ff; }
@@ -318,7 +318,7 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-profile-block:last-child { margin-bottom:0; }
 .ai-profile-name { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--blue); margin-bottom:4px; }
 .ai-profile-name.lili { color:var(--pink); }
-.ai-profile-text { font-size:15px; font-weight:400; line-height:1.65; color:var(--text); }
+.ai-profile-text { font-size:15px; font-weight:400; line-height:1.65; color:var(--text); flex:1; }
 .ai-divider { border:none; border-top:1px solid rgba(10,132,255,.15); margin:12px 0; }
 .ai-intro { font-size:13px; color:var(--sub); margin-bottom:12px; }
 .ai-text { font-size:17px; font-weight:300; line-height:1.6; color:var(--text); }
@@ -337,6 +337,19 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
 .ai-history-title { font-size:12px; color:var(--hint); margin-bottom:10px; text-transform:uppercase; letter-spacing:.05em; }
 .ai-history-toggle-btn { width:100%; padding:12px; background:rgba(255,159,10,.1); border:1.5px solid rgba(255,159,10,.3); border-radius:14px; font-size:14px; color:#b86000; cursor:pointer; font-family:inherit; margin-bottom:8px; transition:all .15s; font-weight:400; }
 .ai-history-toggle-btn:hover { background:rgba(255,159,10,.18); }
+.ai-delete-btn { width:100%; padding:10px; background:transparent; border:1.5px solid rgba(255,59,48,.3); border-radius:14px; font-size:13px; color:rgba(255,59,48,.7); cursor:pointer; font-family:inherit; margin-bottom:8px; transition:all .15s; }
+.ai-delete-btn:hover { background:rgba(255,59,48,.06); }
+/* Confirm dialog */
+.confirm-overlay { display:none; position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.5); backdrop-filter:blur(8px); align-items:center; justify-content:center; }
+.confirm-overlay.show { display:flex; }
+.confirm-box { background:var(--bg2); border-radius:20px; padding:28px 24px 20px; text-align:center; width:260px; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.confirm-title { font-size:20px; font-weight:500; color:var(--text); margin-bottom:6px; }
+.confirm-sub { font-size:14px; font-style:italic; color:var(--hint); margin-bottom:24px; }
+.confirm-btns { display:flex; gap:10px; }
+.confirm-btn-yes { flex:1; padding:13px; background:rgba(255,59,48,.12); border:1.5px solid rgba(255,59,48,.3); border-radius:12px; font-size:16px; font-weight:500; color:rgb(255,59,48); cursor:pointer; font-family:inherit; transition:all .15s; }
+.confirm-btn-yes:hover { background:rgba(255,59,48,.2); }
+.confirm-btn-no  { flex:1; padding:13px; background:var(--bg3); border:none; border-radius:12px; font-size:16px; font-weight:400; color:var(--sub); cursor:pointer; font-family:inherit; transition:all .15s; }
+.confirm-btn-no:hover { color:var(--text); }
 .ai-past-item { background:var(--bg2); border-radius:12px; padding:14px 16px; margin-bottom:8px; }
 .ai-past-date { font-size:12px; font-weight:700; color:var(--text); margin-bottom:6px; }
 .ai-past-text { font-size:14px; color:var(--sub); line-height:1.6; }
@@ -496,16 +509,15 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <button class="ai-gear" onclick="openSettings()" title="Réglages">⚙</button>
       </header>
       <div class="ai-card" id="ai-card-coco">
-        <div class="ai-badge">✦ Analyse</div>
-        <div class="ai-profile-text" id="ai-text-coco">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
+        <div class="ai-profile-text" id="ai-text-coco" style="font-style:italic;color:var(--hint);display:flex;align-items:center;justify-content:center;text-align:center;height:100%;flex:1;">Cliquer sur Analyser</div>
         <div class="ai-period" id="ai-period"></div>
       </div>
       <div class="ai-card lili" id="ai-card-lili">
-        <div class="ai-badge" style="background:rgba(255,55,95,.1);color:var(--pink);">✦ Analyse Lili</div>
-        <div class="ai-profile-text" id="ai-text-lili">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
+        <div class="ai-profile-text" id="ai-text-lili" style="font-style:italic;color:var(--hint);display:flex;align-items:center;justify-content:center;text-align:center;height:100%;flex:1;">Cliquer sur Analyser</div>
       </div>
       <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
-      <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()" style="display:none;">Afficher analyses précédentes</button>
+      <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()">Afficher analyses précédentes</button>
+      <button class="ai-delete-btn" id="ai-delete-btn" onclick="askDeleteHistory()">Supprimer précédents</button>
       <div class="ai-history" id="ai-history" style="display:none;">
         <div id="ai-history-list"></div>
       </div>
@@ -1019,16 +1031,17 @@ ${name} (${n} entrées) :
     });
   });
 
-  return `Tu es un assistant de suivi santé direct et pédagogique. Analyse ces données (sport, alimentation, sommeil, stress, humeur — notés 1 à 3, 3 = excellent) et génère un bilan court en 3-4 phrases max.
+  return `Tu es un assistant de suivi santé direct et pédagogique. Analyse ces données (sport, alimentation, sommeil, stress, humeur — notés 1 à 3, 3 = excellent).
 
 Règles STRICTES :
-- Ton = direct, factuel, pédagogique. PAS de langage thérapeutique, PAS de "je t'encourage", PAS de "prends soin de toi"
-- Détecte et signale clairement les alertes : plusieurs jours sans sport, alimentation mauvaise sur la durée, stress qui monte, sommeil dégradé
-- Exemple de ton voulu : "Coco, tu n'as pas fait de sport depuis 4 jours — c'est le moment de bouger. Ton stress monte depuis lundi, essaie de couper avant 22h."
-- Compare Coco et Lili si les deux ont des données, sinon analyse séparément
-- Choisis la période la plus pertinente selon la densité des données (7j, 14j ou 30j)
-- Termine par 1 action concrète et simple pour les prochains jours
-- Réponds en français, sans titre, sans liste à puces, en phrases directes
+- Ton = direct, factuel, pédagogique. PAS de langage thérapeutique
+- Détecte et signale les alertes : sport absent, alimentation mauvaise, stress qui monte, sommeil dégradé
+- Choisis la période la plus pertinente (7j, 14j ou 30j) selon la densité des données
+- Réponds OBLIGATOIREMENT en 2 paragraphes séparés par une ligne vide
+- PARAGRAPHE 1 = analyse de COCO uniquement (3-4 phrases, termine par 1 action concrète)
+- PARAGRAPHE 2 = analyse de LILI uniquement (3-4 phrases, termine par 1 action concrète)
+- Si un profil n'a pas de données, écris juste "Pas encore de données."
+- Aucun titre, aucune liste, uniquement 2 paragraphes en texte brut séparés par une ligne vide
 
 Données :${dataSummary}`;
 }
@@ -1071,17 +1084,15 @@ async function runAI(){
     const data=await res.json();
     const result=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'Pas de réponse.';
 
-    // Split into Coco / Lili blocks
-    const lines=result.split(/\n+/).filter(l=>l.trim());
-    const liliIdx=lines.findIndex((l,i)=>i>0&&/lili/i.test(l));
+    // Split on double newline = 2 distinct paragraphs
+    const parts=result.split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean);
     cocoEl.className='ai-profile-text';
-    if(liliIdx>0){
-      cocoEl.textContent=lines.slice(0,liliIdx).join(' ');
-      liliEl.textContent=lines.slice(liliIdx).join(' ');
-      liliCard.style.display='block';
+    if(parts.length>=2){
+      cocoEl.textContent=parts[0];
+      liliEl.textContent=parts[1];
     } else {
-      cocoEl.textContent=result;
-      liliCard.style.display='none';
+      cocoEl.textContent=parts[0]||result;
+      liliEl.textContent='';
     }
 
     const totalEntries=['coco','lili'].flatMap(pr=>getDBFor(pr));
@@ -1116,11 +1127,29 @@ function renderAIView(){
 function renderAIHistory(){
   const hist=JSON.parse(localStorage.getItem(AI_HIST_STORE)||'[]');
   const toggleBtn=document.getElementById('ai-history-toggle');
-  if(!hist.length){ if(toggleBtn)toggleBtn.style.display='none'; return; }
+  const deleteBtn=document.getElementById('ai-delete-btn');
+  if(!hist.length){
+    if(toggleBtn){ toggleBtn.style.display='block'; toggleBtn.style.opacity='0.4'; toggleBtn.style.cursor='default'; toggleBtn.onclick=null; }
+    if(deleteBtn){ deleteBtn.style.display='block'; deleteBtn.style.opacity='0.35'; deleteBtn.style.cursor='default'; deleteBtn.onclick=null; }
+    return;
+  }
+  if(deleteBtn){ deleteBtn.style.display='block'; deleteBtn.style.opacity='1'; deleteBtn.style.cursor='pointer'; deleteBtn.onclick=askDeleteHistory; }
   if(toggleBtn)toggleBtn.style.display='block';
   const fmt=d=>{const[,m,day]=d.split('-');const n=['jan','fév','mar','avr','mai','juin','juil','aoû','sep','oct','nov','déc'];return parseInt(day)+' '+n[parseInt(m)-1];};
   const list=document.getElementById('ai-history-list');
   list.innerHTML=hist.map(h=>`<div class="ai-past-item"><div class="ai-past-date">${fmt(h.date)}${h.period?' · '+h.period:''}</div><div class="ai-past-text">${h.text}</div></div>`).join('');
+}
+
+function askDeleteHistory(){
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function closeConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('show');
+}
+function confirmDeleteHistory(){
+  localStorage.removeItem(AI_HIST_STORE);
+  closeConfirm();
+  renderAIHistory();
 }
 
 function toggleAIHistory(){
@@ -1787,6 +1816,16 @@ async function genNews(period) {
 <div class="img-fullscreen" id="img-fullscreen" onclick="closeImgFullscreen()">
   <img id="img-fullscreen-img" src="" alt="">
   <button class="img-fullscreen-close" onclick="closeImgFullscreen()">Masquer</button>
+</div>
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Supprimer ?</div>
+    <div class="confirm-sub">irréversible</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-no" onclick="closeConfirm()">Non</button>
+      <button class="confirm-btn-yes" onclick="confirmDeleteHistory()">Oui</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
