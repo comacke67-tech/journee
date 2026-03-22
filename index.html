@@ -1593,34 +1593,23 @@ async function analysePhoto() {
     catch(e) { throw new Error('Réponse invalide de Gemini'); }
 
     result.style.display = 'block';
-    result.innerHTML = `<div class="nutri-card">
-      <div class="nutri-title">${parsed.dish || 'Repas analysé'}</div>
-      <div class="nutri-subtitle">Estimation visuelle</div>
-      <div class="nutri-grid">
-        <div class="nutri-item kcal">
-          <div class="nutri-item-val">${parsed.kcal || '—'} kcal</div>
-          <div class="nutri-item-lbl">Calories totales</div>
-        </div>
-        <div class="nutri-item">
-          <div class="nutri-item-val">${parsed.proteines || '—'}g</div>
-          <div class="nutri-item-lbl">Protéines</div>
-        </div>
-        <div class="nutri-item">
-          <div class="nutri-item-val">${parsed.glucides || '—'}g</div>
-          <div class="nutri-item-lbl">Glucides</div>
-        </div>
-        <div class="nutri-item">
-          <div class="nutri-item-val">${parsed.lipides || '—'}g</div>
-          <div class="nutri-item-lbl">Lipides</div>
-        </div>
-        <div class="nutri-item">
-          <div class="nutri-item-val">${parsed.fibres || '—'}g</div>
-          <div class="nutri-item-lbl">Fibres</div>
-        </div>
-      </div>
-      <div class="nutri-desc">${parsed.description || ''}</div>
-      <div class="nutri-disclaimer">⚠ Estimation visuelle ±20% — non substituable à un suivi médical</div>
-    </div>`;
+    if (parsed.is_food === false) {
+      result.innerHTML = '<div class="nutri-card"><div style="text-align:center;padding:12px 0;"><div style="font-size:36px;margin-bottom:10px;">🚫</div><div class="nutri-title">Pas un repas</div><div class="nutri-desc">' + (parsed.error || 'Cette image ne contient pas de nourriture identifiable.') + '</div></div></div>';
+    } else {
+      result.innerHTML = '<div class="nutri-card">'
+        + '<div class="nutri-title">' + (parsed.dish || 'Repas analysé') + '</div>'
+        + '<div class="nutri-subtitle">Estimation visuelle</div>'
+        + '<div class="nutri-grid">'
+        + '<div class="nutri-item kcal"><div class="nutri-item-val">' + (parsed.kcal || '—') + ' kcal</div><div class="nutri-item-lbl">Calories totales</div></div>'
+        + '<div class="nutri-item"><div class="nutri-item-val">' + (parsed.proteines || '—') + 'g</div><div class="nutri-item-lbl">Protéines</div></div>'
+        + '<div class="nutri-item"><div class="nutri-item-val">' + (parsed.glucides || '—') + 'g</div><div class="nutri-item-lbl">Glucides</div></div>'
+        + '<div class="nutri-item"><div class="nutri-item-val">' + (parsed.lipides || '—') + 'g</div><div class="nutri-item-lbl">Lipides</div></div>'
+        + '<div class="nutri-item"><div class="nutri-item-val">' + (parsed.fibres || '—') + 'g</div><div class="nutri-item-lbl">Fibres</div></div>'
+        + '</div>'
+        + '<div class="nutri-desc">' + (parsed.description || '') + '</div>'
+        + '<div class="nutri-disclaimer">⚠ Estimation visuelle ±20% — non substituable à un suivi médical</div>'
+        + '</div>';
+    }
   } catch(e) {
     result.style.display = 'block';
     result.innerHTML = '<div class="nutri-card"><div class="nutri-desc">Erreur : ' + e.message + '</div></div>';
@@ -2020,7 +2009,18 @@ async function genNews(period) {
 
   const today = new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const periodLabel = period==='week'?'de la semaine':period==='month'?'du mois':'de la journée';
-  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+' de maniere simple, claire et explicative. Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour, format exact : {"news":[{"cat":"monde","title":"titre","body":"explication 3-4 phrases. Source : https://..."},{"cat":"monde","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"france","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : https://..."},{"cat":"alsace","title":"titre","body":"explication. Source : Nom du media, DD/MM/YYYY, https://url-exacte"}]}';
+  const prompt = 'Tu es journaliste comme Hugo Decrypte. Date du jour : '+today+'. Fais un recap des actualites '+periodLabel+'.'
+    +' Reponds UNIQUEMENT en JSON valide, sans markdown, sans texte autour.'
+    +' REGLES IMPORTANTES : (1) Les URLs doivent etre COMPLETES et VERIFIABLES - commence toujours par https://, inclus le domaine complet et le chemin de l article reel - NE PAS inventer des URLs.'
+    +' (2) La date de l article doit etre au format JJ/MM/AAAA avec l annee complete sur 4 chiffres.'
+    +' Format JSON exact : {"news":['
+    +' {"cat":"monde","title":"titre court","body":"explication 3-4 phrases. Source : nom-du-media.fr, date JJ/MM/AAAA, https://url-complete-et-reelle"},'
+    +' {"cat":"monde","title":"titre court","body":"explication. Source : nom-du-media.fr, date JJ/MM/AAAA, https://url-complete-et-reelle"},'
+    +' {"cat":"france","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
+    +' {"cat":"france","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
+    +' {"cat":"alsace","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"},'
+    +' {"cat":"alsace","title":"titre","body":"explication. Source : nom-media, date JJ/MM/AAAA, https://url"}'
+    +']}';
 
   try {
     const res = await fetch(
