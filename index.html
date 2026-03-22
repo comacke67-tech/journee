@@ -500,9 +500,9 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
         <div class="ai-profile-text" id="ai-text-coco">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
         <div class="ai-period" id="ai-period"></div>
       </div>
-      <div class="ai-card lili" id="ai-card-lili" style="display:none;">
+      <div class="ai-card lili" id="ai-card-lili">
         <div class="ai-badge" style="background:rgba(255,55,95,.1);color:var(--pink);">✦ Analyse Lili</div>
-        <div class="ai-profile-text" id="ai-text-lili"></div>
+        <div class="ai-profile-text" id="ai-text-lili">Lance l'analyse pour obtenir un bilan personnalisé de ta semaine.</div>
       </div>
       <button class="ai-btn" id="ai-btn" onclick="runAI()" style="margin-bottom:12px;">✦ Analyser</button>
       <button class="ai-history-toggle-btn" id="ai-history-toggle" onclick="toggleAIHistory()" style="display:none;">Afficher analyses précédentes</button>
@@ -1053,7 +1053,6 @@ async function runAI(){
   btn.disabled=true;
   cocoEl.className='ai-profile-text loading';
   cocoEl.textContent='Analyse en cours…';
-  liliCard.style.display='none';
   document.getElementById('ai-period').textContent='';
 
   try{
