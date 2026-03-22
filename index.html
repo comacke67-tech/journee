@@ -393,7 +393,10 @@ header { padding:8px 0 2px; display:flex; align-items:center; justify-content:sp
     <button class="pbtn on-coco" id="pbtn-coco" onclick="switchProfile('coco')">Coco</button>
     <button class="pbtn"         id="pbtn-lili" onclick="switchProfile('lili')">Lili</button>
   </div>
-  <button onclick="openSettings()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:17px;cursor:pointer;color:var(--hint);padding:4px 6px;border-radius:8px;" title="Réglages">⚙</button>
+  <div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:4px;align-items:center;">
+    <button onclick="openSheet()" style="background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.3);border-radius:8px;font-size:13px;font-weight:500;color:#1a7a3c;cursor:pointer;padding:4px 9px;font-family:inherit;" title="Google Sheet">📊</button>
+    <button onclick="openSettings()" style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--hint);padding:4px 6px;border-radius:8px;" title="Réglages">⚙</button>
+  </div>
 </div>
 
 <div class="app is-coco" id="app">
@@ -994,7 +997,9 @@ function closeSettingsIfBg(e){ if(e.target===document.getElementById('settings-o
 
 // ── AI ─────────────────────────────────────────────
 const AI_KEY_STORE    = 'mj_ai_key';
-const PEXELS_KEY_STORE = 'mj_pexels_key';
+const PEXELS_KEY_STORE  = 'mj_pexels_key';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/18_OTntwrxEphWegjWP36i-dv61bRocnIy3B0GtuhtuM/edit?usp=sharing';
+const SHEET_PWD_STORE = 'mj_sheet_pwd';
 const AI_HIST_STORE = 'mj_ai_history';
 
 function saveKey(){
@@ -1231,6 +1236,40 @@ function renderAIHistory(){
   const fmt=d=>{const[,m,day]=d.split('-');const n=['jan','fév','mar','avr','mai','juin','juil','aoû','sep','oct','nov','déc'];return parseInt(day)+' '+n[parseInt(m)-1];};
   const list=document.getElementById('ai-history-list');
   list.innerHTML=hist.map(h=>`<div class="ai-past-item"><div class="ai-past-date">${fmt(h.date)}${h.period?' · '+h.period:''}</div><div class="ai-past-text">${h.text}</div></div>`).join('');
+}
+
+const SHEET_PASSWORD = 'journee2025'; // change this to your password
+
+function openSheet(){
+  const saved = localStorage.getItem(SHEET_PWD_STORE);
+  if(saved === SHEET_PASSWORD){
+    window.open(SHEET_URL, '_blank');
+    return;
+  }
+  const inp = document.getElementById('sheet-pwd-input');
+  if(inp) inp.value = '';
+  const err = document.getElementById('sheet-pwd-error');
+  if(err) err.style.display = 'none';
+  document.getElementById('sheet-overlay').classList.add('show');
+  setTimeout(()=>{ const i=document.getElementById('sheet-pwd-input'); if(i)i.focus(); }, 150);
+}
+
+function closeSheetOverlay(){
+  document.getElementById('sheet-overlay').classList.remove('show');
+}
+
+function checkSheetPwd(){
+  const val = document.getElementById('sheet-pwd-input').value;
+  if(val === SHEET_PASSWORD){
+    localStorage.setItem(SHEET_PWD_STORE, val);
+    closeSheetOverlay();
+    window.open(SHEET_URL, '_blank');
+  } else {
+    const err = document.getElementById('sheet-pwd-error');
+    if(err){ err.style.display = 'block'; }
+    const inp = document.getElementById('sheet-pwd-input');
+    if(inp){ inp.value=''; inp.focus(); }
+  }
 }
 
 function askDeleteHistory(){
@@ -2029,10 +2068,24 @@ async function genNews(period) {
   <img id="img-fullscreen-img" src="" alt="">
   <button class="img-fullscreen-close" onclick="closeImgFullscreen()">Masquer</button>
 </div>
+<!-- Sheet password overlay -->
+<div class="confirm-overlay" id="sheet-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" style="margin-bottom:14px;">🔒 Accès Sheet</div>
+    <input id="sheet-pwd-input" type="password" placeholder="Mot de passe…"
+      style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--sep);background:var(--bg3);font-size:16px;font-family:inherit;color:var(--text);outline:none;box-sizing:border-box;margin-bottom:12px;"
+      onkeydown="if(event.key==='Enter')checkSheetPwd()">
+    <div id="sheet-pwd-error" style="color:rgb(255,59,48);font-size:13px;margin-bottom:10px;display:none;">Mot de passe incorrect</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn-yes" onclick="checkSheetPwd()">Ouvrir</button>
+      <button class="confirm-btn-no" onclick="closeSheetOverlay()">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
     <div class="confirm-title">Supprimer ?</div>
-    <div class="confirm-sub">irréversible</div>
     <div class="confirm-btns">
       <button class="confirm-btn-yes" onclick="confirmDeleteHistory()">Oui</button>
       <button class="confirm-btn-no" onclick="closeConfirm()">Non</button>
