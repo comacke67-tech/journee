@@ -192,7 +192,9 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 .news-detail-title { font-size:18px; font-weight:500; color:var(--text); line-height:1.35; margin-bottom:14px; }
 .news-detail-text { font-size:15px; line-height:1.75; color:var(--sub); white-space:pre-wrap; }
 .news-detail-text a { color:var(--blue); text-decoration:none; }
-.news-loading { font-size:15px; color:var(--hint); font-style:italic; text-align:center; padding:32px 0; animation:ai-pulse 1.5s ease-in-out infinite; }
+.news-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0; gap:12px; }
+.news-spinner { width:32px; height:32px; border:3px solid var(--sep); border-top-color:var(--text); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
 /* ── Repas IA ── */
 .repas-screen { display:flex; flex-direction:column; }
 .repas-input-area textarea {
@@ -525,14 +527,14 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
       <div class="hdate">News du jour</div>
     </header>
     <button class="news-gen-btn" id="news-gen-btn" onclick="genNews()">📰 Récap du jour</button>
-    <div class="news-loading" id="news-loading" style="display:none;">Hugo décrypte en cours…</div>
+    <div class="news-loading" id="news-loading" style="display:none;"><div class="news-spinner"></div></div>
     <div id="news-list"></div>
   </div>
 
 </div><!-- /app -->
 
 <!-- News detail overlay -->
-<div class="news-overlay" id="news-overlay">
+<div class="news-overlay" id="news-overlay" onclick="closeNewsIfBg(event)">
   <div class="news-detail">
     <div class="news-detail-header">
       <div class="news-detail-nav">
@@ -550,7 +552,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
 </div>
 
 <!-- Recipe overlay -->
-<div class="recipe-overlay" id="recipe-overlay">
+<div class="recipe-overlay" id="recipe-overlay" onclick="closeRecipeIfBg(event)">
   <div class="recipe-sheet">
     <div class="recipe-sheet-header">
       <div class="recipe-title" id="recipe-title"></div>
@@ -577,7 +579,7 @@ body.light .news-gen-btn { background:linear-gradient(135deg,#1c1c1e,#444); }
     <div class="ticon">〜</div><div class="tlbl">Graphe</div>
   </button>
   <button class="tbtn" id="tab-ai" onclick="switchTab('ai')">
-    <div class="ticon">✦</div><div class="tlbl">IA</div>
+    <div class="ticon">✦</div><div class="tlbl">Coach</div>
   </button>
   <button class="tbtn" id="tab-repas" onclick="switchTab('repas')">
     <div class="ticon">🍽</div><div class="tlbl">Repas</div>
@@ -1303,6 +1305,9 @@ function showRepasInput() {
 function closeRecipe() {
   document.getElementById('recipe-overlay').classList.remove('show');
 }
+function closeRecipeIfBg(e) {
+  if (e.target === document.getElementById('recipe-overlay')) closeRecipe();
+}
 
 function openImgFullscreen() {
   const src = document.getElementById('recipe-img').src;
@@ -1539,6 +1544,9 @@ function openNews(idx) {
 function closeNews() {
   document.getElementById('news-overlay').classList.remove('show');
 }
+function closeNewsIfBg(e) {
+  if (e.target === document.getElementById('news-overlay')) closeNews();
+}
 
 function newsNav(delta) {
   newsIdx = Math.max(0, Math.min(newsData.length - 1, newsIdx + delta));
@@ -1554,8 +1562,23 @@ function renderNewsDetail() {
   document.getElementById('news-detail-title').textContent = n.title;
   // Render body with clickable links
   const bodyEl = document.getElementById('news-detail-text');
-  const withLinks = (n.body||'').replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
-  bodyEl.innerHTML = withLinks;
+  const raw = n.body || '';
+  // Split on "Source" keyword to separate body from source
+  const srcMatch = raw.match(/(.+?)(\n?\s*Sources?\s*:\s*.+)$/s);
+  let mainText, sourceText;
+  if (srcMatch) {
+    mainText = srcMatch[1].trim();
+    sourceText = srcMatch[2].trim();
+  } else {
+    // Try to detect URLs at the end
+    const urlMatch = raw.match(/(.+?)(\n?https?:\/\/.+)$/s);
+    if (urlMatch) { mainText = urlMatch[1].trim(); sourceText = urlMatch[2].trim(); }
+    else { mainText = raw; sourceText = ''; }
+  }
+  const linkify = t => t.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
+  bodyEl.innerHTML =
+    '<span>' + linkify(mainText) + '</span>' +
+    (sourceText ? '<br><br><em style="font-size:13px;color:var(--hint);display:block;">' + linkify(sourceText) + '</em>' : '');
   document.getElementById('news-prev-btn').disabled = newsIdx === 0;
   document.getElementById('news-next-btn').disabled = newsIdx === newsData.length - 1;
 }
